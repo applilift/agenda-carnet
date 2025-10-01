@@ -5,45 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Carnet de Bord - Agenda</title>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; }
-    .calendar { max-width: 1000px; margin: 20px auto; text-align: center; }
-    .date { font-size: 30px; margin: 20px 0; font-weight: bold; }
-    input[type="date"] { font-size: 20px; padding: 10px; max-width: 300px; margin-bottom: 20px; }
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#fafafa; }
+    .calendar { max-width: 1000px; margin: 10px auto; text-align: center; padding:10px; }
+    .date { font-size: 24px; margin: 10px 0; font-weight: bold; }
+    input[type="date"] { font-size: 18px; padding: 8px; max-width: 90%; margin-bottom: 15px; }
 
-    .columns { display: flex; justify-content: space-between; position: relative; gap: 20px; }
+    .columns { display: flex; justify-content: space-between; position: relative; gap: 10px; }
     .column { width: 48%; }
-    .divider { width: 4px; background: black; position: absolute; top: 0; left: 50%; transform: translateX(-50%); bottom: 0; }
+    .divider { width: 3px; background: black; position: absolute; top: 0; left: 50%; transform: translateX(-50%); bottom: 0; }
 
-    .time-slot { margin: 10px 0; text-align: left; display: flex; justify-content: flex-start; align-items: flex-start; }
-    .pro-part-container { display: flex; flex-direction: column; margin-right: 10px; }
-    .pro-part-button { background-color: mediumorchid; color: white; font-weight: bold; border: none; padding: 5px 10px; margin: 2px 0; cursor: pointer; border-radius: 5px; }
+    .time-slot { margin: 6px 0; text-align: left; display: flex; justify-content: flex-start; align-items: flex-start; padding:6px; background:white; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+    .pro-part-container { display: flex; flex-direction: column; margin-right: 6px; }
+    .pro-part-button { background-color: mediumorchid; color: white; font-weight: bold; border: none; padding: 5px 8px; margin: 2px 0; cursor: pointer; border-radius: 5px; font-size:13px; }
 
-    .reservation-form { margin: 10px 0; flex-grow: 1; margin-left: 10px; }
+    .reservation-form { flex-grow: 1; margin-left: 6px; font-size:14px; }
     .selected-option { font-weight: bold; }
     .lift-express { color: red; font-weight: bold; }
     .lift { color: green; font-weight: bold; }
     .rdv-perso { color: orange; font-weight: bold; }
     .pause { background-color: white; color: rgb(0,102,204); border: 1px solid blue; font-weight: bold; }
 
-    .form-field { margin-bottom: 5px; }
-    .form-field input, .form-field textarea, .form-field select { width: 100%; padding: 6px; box-sizing: border-box; }
-    .horizontal-line { width: 100%; height: 2px; background: #ccc; margin: 10px 0; }
+    .form-field { margin-bottom: 4px; }
+    .form-field input, .form-field textarea, .form-field select { width: 100%; padding: 5px; box-sizing: border-box; font-size:13px; }
+    .horizontal-line { width: 100%; height: 1px; background: #ddd; margin: 6px 0; }
 
-    .note-btn, .facture-btn { background-color: darkslateblue; color: white; border: none; font-weight: bold; padding: 6px 12px; margin: 2px; cursor: pointer; }
+    .note-btn, .facture-btn { background-color: darkslateblue; color: white; border: none; font-weight: bold; padding: 5px 8px; margin: 2px; cursor: pointer; border-radius:4px; font-size:13px; }
     .note-btn.has-note, .facture-btn.has-facture { background-color: orange; }
 
-    .note-field, .facture-fieldset { display: none; margin-top: 5px; padding: 10px; border: 1px solid #999; background: #f9f9f9; position: relative; }
+    .note-field, .facture-fieldset { display: none; margin-top: 5px; padding: 8px; border: 1px solid #999; background: #f9f9f9; position: relative; border-radius:6px; }
     .close-btn { position: absolute; top: 2px; right: 5px; background: none; border: none; color: #666; font-size: 14px; cursor: pointer; }
     .close-btn:hover { color: red; }
 
-    .facture-status { display: inline-block; margin-left: 4px; padding: 2px 6px; border: 1px solid #666; border-radius: 4px; font-size: 11px; cursor: pointer; background: #eee; color: #333; }
+    .facture-status { display: inline-block; margin-left: 3px; padding: 2px 4px; border: 1px solid #666; border-radius: 3px; font-size: 11px; cursor: pointer; background: #eee; color: #333; }
     .facture-status.active { background: green; color: white; font-weight: bold; }
 
-    /* Petites améliorations responsive */
-    @media (max-width: 900px){
+    /* Responsive smartphone */
+    @media (max-width: 768px){
       .columns { flex-direction: column; }
       .column { width: 100%; }
       .divider { display:none; }
+      .time-slot { flex-direction: column; }
+      .pro-part-container { flex-direction: row; margin-bottom:6px; }
+      .pro-part-button { flex:1; margin:0 3px; font-size:12px; padding:6px; }
+      .reservation-form { margin-left:0; }
+      .note-btn, .facture-btn { font-size:12px; padding:5px 6px; }
     }
   </style>
 </head>
@@ -55,11 +60,10 @@
   <div id="timeSlots" class="columns"></div>
 </div>
 
-<!-- Code principal (Firebase + logique) -->
+<!-- 🔥 Code principal -->
 <script type="module">
-  /* -------------------- Firebase -------------------- */
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, deleteDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, deleteDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAiRQYtjjPjkwiU76iqZGdnxgxjjbbaLQI",
@@ -72,7 +76,6 @@
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
-  /* -------------------- DOM -------------------- */
   const datePicker = document.getElementById('datePicker');
   const dateDisplay = document.getElementById('dateDisplay');
   const timeSlotsContainer = document.getElementById('timeSlots');
@@ -83,432 +86,174 @@
 
   function updateCalendar() {
     const selectedDate = new Date(datePicker.value);
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    dateDisplay.innerText = selectedDate.toLocaleDateString('fr-FR', options);
+    dateDisplay.innerText = selectedDate.toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     generateTimeSlots(selectedDate);
     loadReservations(datePicker.value);
   }
 
   function generateTimeSlots(date) {
     timeSlotsContainer.innerHTML = '';
-    const startHour = 6, endHour = 20;
+    const startHour=6, endHour=20;
+    const column1=document.createElement('div'); const column2=document.createElement('div');
+    column1.className='column'; column2.className='column'; const divider=document.createElement('div'); divider.className='divider';
 
-    const column1 = document.createElement('div');
-    const column2 = document.createElement('div');
-    column1.className = 'column'; column2.className = 'column';
-    const divider = document.createElement('div'); divider.className = 'divider';
+    for(let hour=startHour; hour<endHour; hour++){
+      for(let minute=0; minute<60; minute+=30){
+        const id=`${hour}-${minute}`;
+        const time=new Date(date); time.setHours(hour); time.setMinutes(minute);
+        const formattedTime=time.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+        const timeSlot=document.createElement('div'); timeSlot.className='time-slot';
 
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const id = `${hour}-${minute}`;
-        const timeSlot = document.createElement('div');
-        timeSlot.className = 'time-slot';
-
-        const time = new Date(date);
-        time.setHours(hour); time.setMinutes(minute);
-        const formattedTime = time.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-
-        // Zone PRO / PART (gauche)
-        const proPartContainer = document.createElement('div');
-        proPartContainer.className = 'pro-part-container';
-        proPartContainer.innerHTML = `
-          <button id="pro-${id}"  class="pro-part-button" onclick="selectProPart('PRO','${id}')">PRO</button>
+        const proPartContainer=document.createElement('div');
+        proPartContainer.className='pro-part-container';
+        proPartContainer.innerHTML=`
+          <button id="pro-${id}" class="pro-part-button" onclick="selectProPart('PRO','${id}')">PRO</button>
           <button id="part-${id}" class="pro-part-button" onclick="selectProPart('PART','${id}')">PART</button>
         `;
 
-        // Contenu principal
-        const slotContent = document.createElement('div');
-        slotContent.className = 'reservation-form';
-        slotContent.innerHTML = `
+        const slotContent=document.createElement('div');
+        slotContent.className='reservation-form';
+        slotContent.innerHTML=`
           <div>${formattedTime} - <span class="selected-option" id="selectedOption-${id}">Choisir</span></div>
-
           <button class="lift-express" onclick="selectOption('LIFT EXPRESS','${id}')">LIFT EXPRESS</button>
-          <button class="lift" onclick="selectOption('# LIFT','${id}')"><strong># LIFT</strong></button>
-          <button class="rdv-perso" onclick="selectOption('RDV PERSO','${id}')"><strong>RDV PERSO</strong></button>
-          <button class="pause" onclick="selectOption('PAUSE','${id}')"><strong>PAUSE</strong></button>
+          <button class="lift" onclick="selectOption('# LIFT','${id}')"># LIFT</button>
+          <button class="rdv-perso" onclick="selectOption('RDV PERSO','${id}')">RDV PERSO</button>
+          <button class="pause" onclick="selectOption('PAUSE','${id}')">PAUSE</button>
 
           <button id="noteBtn-${id}" class="note-btn" onclick="toggleNote('${id}')">NOTE</button>
           <button id="factureBtn-${id}" class="facture-btn" onclick="toggleFacture('${id}')">FACTURE</button>
           <span id="factureSent-${id}" class="facture-status" onclick="toggleStatus('factureSent','${id}')">V(F)</span>
           <span id="facturePaid-${id}" class="facture-status" onclick="toggleStatus('facturePaid','${id}')">V(P)</span>
 
-          <!-- NOTE -->
           <div class="form-field note-field" id="noteField-${id}">
             <button class="close-btn" onclick="toggleNote('${id}')">✖</button>
-            <label for="note-${id}">Note :</label>
+            <label>Note :</label>
             <textarea id="note-${id}" rows="2" oninput="updateNoteIndicator('${id}')"></textarea>
           </div>
 
-          <!-- FACTURE -->
           <fieldset class="facture-fieldset" id="factureField-${id}">
             <button class="close-btn" onclick="toggleFacture('${id}')">✖</button>
             <legend>Facturation</legend>
-
-            <label>Type de client :</label>
+            <label>Type :</label>
             <select id="factureType-${id}" onchange="toggleFactureType('${id}')">
               <option value="PRO">PRO</option>
               <option value="PART">PARTICULIER</option>
             </select><br>
-
-            <label>Statut client :</label>
+            <label>Statut :</label>
             <select id="factureStatus-${id}" onchange="toggleFactureFields('${id}')">
-              <option value="encore">Ce client n'est pas encodé</option>
-              <option value="deja">Ce client est déjà encodé</option>
+              <option value="encore">Pas encodé</option>
+              <option value="deja">Déjà encodé</option>
             </select><br>
-
-            <!-- Bloc PRO -->
             <div id="facturePro-${id}">
-              <label>Nom de la firme (obligatoire) :</label>
-              <input type="text" id="factureFirme-${id}" oninput="updateFactureIndicator('${id}')"><br>
-
-              <div class="extra-facture" id="extraPro-${id}">
+              <label>Firme* :</label><input type="text" id="factureFirme-${id}" oninput="updateFactureIndicator('${id}')"><br>
+              <div id="extraPro-${id}">
                 <label>Rue :</label><input type="text" id="factureRue-${id}"><br>
-                <label>Code postal :</label><input type="text" id="factureCP-${id}"><br>
+                <label>CP :</label><input type="text" id="factureCP-${id}"><br>
                 <label>Ville :</label><input type="text" id="factureVille-${id}"><br>
-                <label>Numéro TVA :</label><input type="text" id="factureTVA-${id}"><br>
+                <label>TVA :</label><input type="text" id="factureTVA-${id}"><br>
                 <label>Email :</label><input type="email" id="factureEmail-${id}"><br>
               </div>
             </div>
-
-            <!-- Bloc PART -->
             <div id="facturePart-${id}" style="display:none;">
-              <label>Prénom (obligatoire) :</label>
-              <input type="text" id="facturePrenom-${id}" oninput="updateFactureIndicator('${id}')"><br>
-              <label>Nom (obligatoire) :</label>
-              <input type="text" id="factureNom-${id}" oninput="updateFactureIndicator('${id}')"><br>
-
-              <div class="extra-facture" id="extraPart-${id}">
+              <label>Prénom* :</label><input type="text" id="facturePrenom-${id}" oninput="updateFactureIndicator('${id}')"><br>
+              <label>Nom* :</label><input type="text" id="factureNom-${id}" oninput="updateFactureIndicator('${id}')"><br>
+              <div id="extraPart-${id}">
                 <label>Rue :</label><input type="text" id="factureRueP-${id}"><br>
-                <label>Code postal :</label><input type="text" id="factureCPP-${id}"><br>
+                <label>CP :</label><input type="text" id="factureCPP-${id}"><br>
                 <label>Ville :</label><input type="text" id="factureVilleP-${id}"><br>
                 <label>Email :</label><input type="email" id="factureEmailP-${id}"><br>
               </div>
             </div>
-
-            <label>Mode de paiement (obligatoire) :</label>
+            <label>Paiement* :</label>
             <select id="facturePaiement-${id}" onchange="updateFactureIndicator('${id}')">
-              <option value="">-- Choisir --</option>
-              <option value="cash">Payé cash</option>
-              <option value="virement">Payé virement</option>
-              <option value="non">Non payé</option>
+              <option value="">--</option><option value="cash">Cash</option><option value="virement">Virement</option><option value="non">Non payé</option>
             </select>
           </fieldset>
 
-          <div class="form-field">
-            <label for="lieux-${id}">Lieux :</label>
-            <textarea id="lieux-${id}" rows="2" style="background-color:white"></textarea>
-          </div>
-
+          <div class="form-field"><label>Lieux :</label><textarea id="lieux-${id}" rows="2"></textarea></div>
           <button onclick="reserve('${formattedTime}','${id}')">Réserver</button>
-          <button id="modifyButton-${id}" onclick="modifyReservation('${id}')">Modifier</button>
-          <button id="cancelButton-${id}" onclick="cancelReservation('${id}')">Annuler</button>
+          <button onclick="modifyReservation('${id}')">Modifier</button>
+          <button onclick="cancelReservation('${id}')">Annuler</button>
         `;
-
-        timeSlot.appendChild(proPartContainer);
-        timeSlot.appendChild(slotContent);
-        const horizontalLine = document.createElement('div'); horizontalLine.className = 'horizontal-line';
-
-        if (minute === 0) { column1.appendChild(timeSlot); column1.appendChild(horizontalLine); }
-        else { column2.appendChild(timeSlot); column2.appendChild(horizontalLine); }
+        timeSlot.appendChild(proPartContainer); timeSlot.appendChild(slotContent);
+        const horizontalLine=document.createElement('div'); horizontalLine.className='horizontal-line';
+        if(minute===0){column1.appendChild(timeSlot);column1.appendChild(horizontalLine);} else {column2.appendChild(timeSlot);column2.appendChild(horizontalLine);}
       }
     }
-    timeSlotsContainer.appendChild(column1);
-    timeSlotsContainer.appendChild(divider);
-    timeSlotsContainer.appendChild(column2);
+    timeSlotsContainer.appendChild(column1); timeSlotsContainer.appendChild(divider); timeSlotsContainer.appendChild(column2);
   }
 
-  /* -------------------- Handlers (exposés au window) -------------------- */
-  // Sélection du type de RDV -> colore "Lieux"
-  window.selectOption = function(option, id) {
+  /* === Fonctions === */
+  window.selectOption = function(option,id){
     document.getElementById(`selectedOption-${id}`).innerText = option;
-    const lieux = document.getElementById(`lieux-${id}`);
+    const lieux=document.getElementById(`lieux-${id}`);
     switch(option){
       case 'LIFT EXPRESS': lieux.style.backgroundColor='rgba(255,99,71,0.5)'; break;
-      case '# LIFT':       lieux.style.backgroundColor='rgba(144,238,144,0.5)'; break;
-      case 'RDV PERSO':    lieux.style.backgroundColor='rgba(255,165,0,0.5)'; break;
-      case 'PAUSE':        lieux.style.backgroundColor='rgba(173,216,230,0.5)'; break;
-      default:             lieux.style.backgroundColor='white';
+      case '# LIFT': lieux.style.backgroundColor='rgba(144,238,144,0.5)'; break;
+      case 'RDV PERSO': lieux.style.backgroundColor='rgba(255,165,0,0.5)'; break;
+      case 'PAUSE': lieux.style.backgroundColor='rgba(173,216,230,0.5)'; break;
     }
   };
 
-  // Boutons PRO / PART (gauche)
-  window.selectProPart = function(type, id) {
-    const pro = document.getElementById(`pro-${id}`);
-    const part= document.getElementById(`part-${id}`);
-    if (type === 'PRO'){ pro.style.display = 'block'; part.style.display = 'none'; }
-    else { pro.style.display = 'none'; part.style.display = 'block'; }
-    // On mémorise la sélection visuelle dans data-* du conteneur Lieux (simple et local)
-    document.getElementById(`lieux-${id}`).dataset.propart = type;
+  window.selectProPart=function(type,id){
+    const pro=document.getElementById(`pro-${id}`),part=document.getElementById(`part-${id}`);
+    if(type==='PRO'){pro.style.display="block";part.style.display="none";}else{pro.style.display="none";part.style.display="block";}
   };
 
-  // NOTE
-  window.toggleNote = function(id){
-    const f = document.getElementById(`noteField-${id}`);
-    f.style.display = (f.style.display==="none"||f.style.display==="") ? "block" : "none";
-  };
-  window.updateNoteIndicator = function(id){
-    const btn = document.getElementById(`noteBtn-${id}`);
-    const v = document.getElementById(`note-${id}`).value.trim();
-    if (v.length>0){ btn.classList.add("has-note"); btn.innerText="NOTE ✎"; }
-    else { btn.classList.remove("has-note"); btn.innerText="NOTE"; }
-  };
+  window.toggleNote=function(id){const f=document.getElementById(`noteField-${id}`);f.style.display=(f.style.display==="none"||f.style.display==="")?"block":"none";};
+  window.updateNoteIndicator=function(id){const btn=document.getElementById(`noteBtn-${id}`);const v=document.getElementById(`note-${id}`).value.trim();if(v.length>0){btn.classList.add("has-note");btn.innerText="NOTE ✎";}else{btn.classList.remove("has-note");btn.innerText="NOTE";}};
+  window.toggleFacture=function(id){const f=document.getElementById(`factureField-${id}`);f.style.display=(f.style.display==="none"||f.style.display==="")?"block":"none";};
+  window.toggleFactureType=function(id){const type=document.getElementById(`factureType-${id}`).value;document.getElementById(`facturePro-${id}`).style.display=(type==="PRO")?"block":"none";document.getElementById(`facturePart-${id}`).style.display=(type==="PART")?"block":"none";};
+  window.toggleFactureFields=function(id){const status=document.getElementById(`factureStatus-${id}`).value;const type=document.getElementById(`factureType-${id}`).value;if(type==="PRO"){document.getElementById(`extraPro-${id}`).style.display=(status==="deja")?"none":"block";}else{document.getElementById(`extraPart-${id}`).style.display=(status==="deja")?"none":"block";}};
+  window.updateFactureIndicator=function(id){const btn=document.getElementById(`factureBtn-${id}`);const type=document.getElementById(`factureType-${id}`).value;const paiement=document.getElementById(`facturePaiement-${id}`).value;let ok=false;if(type==="PRO"){ok=document.getElementById(`factureFirme-${id}`).value.trim().length>0&&paiement!=="";}else{ok=document.getElementById(`facturePrenom-${id}`).value.trim().length>0&&document.getElementById(`factureNom-${id}`).value.trim().length>0&&paiement!=="";}if(ok){btn.classList.add("has-facture");btn.innerText="FACTURE ✎";}else{btn.classList.remove("has-facture");btn.innerText="FACTURE";}};
+  window.toggleStatus=function(type,id){const el=document.getElementById(`${type}-${id}`);el.classList.toggle("active");};
 
-  // FACTURE : affichage PRO/PART & statut
-  window.toggleFacture = function(id){
-    const f = document.getElementById(`factureField-${id}`);
-    f.style.display = (f.style.display==="none"||f.style.display==="") ? "block" : "none";
-  };
-  window.toggleFactureType = function(id){
-    const type = document.getElementById(`factureType-${id}`).value;
-    document.getElementById(`facturePro-${id}`).style.display  = (type==="PRO") ? "block" : "none";
-    document.getElementById(`facturePart-${id}`).style.display = (type==="PART")? "block" : "none";
-    updateFactureIndicator(id);
-  };
-  window.toggleFactureFields = function(id){
-    const status = document.getElementById(`factureStatus-${id}`).value; // "encore" | "deja"
-    const type   = document.getElementById(`factureType-${id}`).value;   // "PRO" | "PART"
-    // Si "déjà encodé" -> masquer champs additionnels, sinon afficher
-    if (type === "PRO"){
-      document.getElementById(`extraPro-${id}`).style.display  = (status==="deja") ? "none" : "block";
-    } else {
-      document.getElementById(`extraPart-${id}`).style.display = (status==="deja") ? "none" : "block";
-    }
-    updateFactureIndicator(id);
-  };
-
-  // FACTURE : validation -> bouton orange si OK
-  window.updateFactureIndicator = function(id){
-    const type   = document.getElementById(`factureType-${id}`).value;
-    const status = document.getElementById(`factureStatus-${id}`).value;
-    const paiement = document.getElementById(`facturePaiement-${id}`).value;
-
-    let ok = false;
-    if (type === "PRO"){
-      const firme = document.getElementById(`factureFirme-${id}`).value.trim();
-      if (status === "deja"){
-        ok = (firme.length>0 && paiement!=="");
-      } else {
-        const rue  = document.getElementById(`factureRue-${id}`).value.trim();
-        const cp   = document.getElementById(`factureCP-${id}`).value.trim();
-        const ville= document.getElementById(`factureVille-${id}`).value.trim();
-        const tva  = document.getElementById(`factureTVA-${id}`).value.trim();
-        const mail = document.getElementById(`factureEmail-${id}`).value.trim();
-        ok = (firme && rue && cp && ville && tva && mail && paiement!=="");
-      }
-    } else { // PART
-      const prenom = document.getElementById(`facturePrenom-${id}`).value.trim();
-      const nom    = document.getElementById(`factureNom-${id}`).value.trim();
-      if (status === "deja"){
-        ok = (prenom && nom && paiement!=="");
-      } else {
-        const rueP = document.getElementById(`factureRueP-${id}`).value.trim();
-        const cpP  = document.getElementById(`factureCPP-${id}`).value.trim();
-        const villeP = document.getElementById(`factureVilleP-${id}`).value.trim();
-        const mailP  = document.getElementById(`factureEmailP-${id}`).value.trim();
-        ok = (prenom && nom && rueP && cpP && villeP && mailP && paiement!=="");
-      }
-    }
-
-    const btn = document.getElementById(`factureBtn-${id}`);
-    if (ok){ btn.classList.add("has-facture"); btn.innerText="FACTURE ✎"; }
-    else   { btn.classList.remove("has-facture"); btn.innerText="FACTURE"; }
-  };
-
-  // V(F) / V(P)
-  window.toggleStatus = function(type, id){
-    const el = document.getElementById(`${type}-${id}`);
-    el.classList.toggle("active");
-  };
-
-  // Réserver -> sauvegarder Firestore
-  window.reserve = async function(time, id){
-    const lieux = document.getElementById(`lieux-${id}`).value.trim();
-    if (!lieux){ alert("Veuillez entrer un lieu."); return; }
-
-    const payload = collectSlotData(id);
-    await setDoc(doc(db, "reservations", `${payload.date}_${id}`), payload);
-    document.getElementById(`lieux-${id}`).disabled = true; // on verrouille uniquement Lieux
-    alert(`Réservation confirmée pour ${time}.\nLieu: ${lieux}`);
-  };
-
-  // Modifier -> réactiver uniquement Lieux + réafficher PRO/PART
-  window.modifyReservation = function(id){
-    document.getElementById(`lieux-${id}`).disabled = false;
-    document.getElementById(`pro-${id}`).style.display = "block";
-    document.getElementById(`part-${id}`).style.display = "block";
-  };
-
-  // Annuler -> supprimer Firestore + reset visuel
-  window.cancelReservation = async function(id){
-    await deleteDoc(doc(db, "reservations", `${datePicker.value}_${id}`));
-
-    // Reset RDV
-    document.getElementById(`selectedOption-${id}`).innerText = "Choisir";
-    const lieux = document.getElementById(`lieux-${id}`);
-    lieux.value = "";
-    lieux.disabled = false;
-    lieux.style.backgroundColor = "white";
-    delete lieux.dataset.propart;
-
-    // PRO/PART visibles
-    document.getElementById(`pro-${id}`).style.display = "block";
-    document.getElementById(`part-${id}`).style.display = "block";
-
-    // NOTE
-    document.getElementById(`note-${id}`).value = "";
-    const noteBtn = document.getElementById(`noteBtn-${id}`);
-    noteBtn.classList.remove("has-note");
-    noteBtn.innerText = "NOTE";
-    document.getElementById(`noteField-${id}`).style.display = "none";
-
-    // FACTURE
-    document.getElementById(`factureType-${id}`).value = "PRO";
-    document.getElementById(`factureStatus-${id}`).value = "encore";
-    document.getElementById(`factureFirme-${id}`).value = "";
-    ["Rue","CP","Ville","TVA","Email"].forEach(s=>{ const el = document.getElementById(`facture${s}-${id}`); if(el) el.value = ""; });
-    ["Prenom","Nom","RueP","CPP","VilleP","EmailP"].forEach(s=>{ const el = document.getElementById(`facture${s}-${id}`); if(el) el.value = ""; });
-    document.getElementById(`facturePaiement-${id}`).value = "";
-    const factureBtn = document.getElementById(`factureBtn-${id}`);
-    factureBtn.classList.remove("has-facture");
-    factureBtn.innerText = "FACTURE";
-    document.getElementById(`factureField-${id}`).style.display = "none";
-    document.getElementById(`facturePro-${id}`).style.display = "block";
-    document.getElementById(`facturePart-${id}`).style.display = "none";
-    document.getElementById(`extraPro-${id}`).style.display = "block";
-    document.getElementById(`extraPart-${id}`).style.display = "block";
-
-    // Statuts
-    document.getElementById(`factureSent-${id}`).classList.remove("active");
-    document.getElementById(`facturePaid-${id}`).classList.remove("active");
-  };
-
-  // Récupérer réservations de la journée
-  async function loadReservations(dateISO){
-    // On ne charge que la journée sélectionnée
-    const q = query(collection(db,"reservations"), where("date","==",dateISO));
-    const snap = await getDocs(q);
-    snap.forEach(docSnap => restoreReservation(docSnap.data()));
-  }
-
-  // Restaurer visuel depuis Firestore
-  function restoreReservation(data){
-    const id = data.slotId;
-
-    // Type de RDV & couleur
-    if (data.option){
-      document.getElementById(`selectedOption-${id}`).innerText = data.option;
-      window.selectOption(data.option, id);
-    }
-
-    // Lieux
-    if (typeof data.lieux === "string"){
-      const lieux = document.getElementById(`lieux-${id}`);
-      lieux.value = data.lieux;
-      lieux.disabled = true;
-    }
-
-    // PRO/PART (gauche) mémorisé en data-propart
-    if (data.proPart){
-      document.getElementById(`lieux-${id}`).dataset.propart = data.proPart;
-      // Visuel : on garde un seul bouton visible selon le choix
-      if (data.proPart === "PRO"){ document.getElementById(`pro-${id}`).style.display="block"; document.getElementById(`part-${id}`).style.display="none"; }
-      else { document.getElementById(`pro-${id}`).style.display="none"; document.getElementById(`part-${id}`).style.display="block"; }
-    }
-
-    // Note
-    if (data.note && data.note.trim().length>0){
-      document.getElementById(`note-${id}`).value = data.note;
-      const noteBtn = document.getElementById(`noteBtn-${id}`);
-      noteBtn.classList.add("has-note");
-      noteBtn.innerText = "NOTE ✎";
-    }
-
-    // Facture - type / statut
-    if (data.factureType)   document.getElementById(`factureType-${id}`).value = data.factureType;
-    if (data.factureStatus) document.getElementById(`factureStatus-${id}`).value = data.factureStatus;
-
-    // Facture - champs PRO
-    if (data.factureFirme) document.getElementById(`factureFirme-${id}`).value = data.factureFirme;
-    if (data.factureRue)   document.getElementById(`factureRue-${id}`).value   = data.factureRue || "";
-    if (data.factureCP)    document.getElementById(`factureCP-${id}`).value    = data.factureCP || "";
-    if (data.factureVille) document.getElementById(`factureVille-${id}`).value = data.factureVille || "";
-    if (data.factureTVA)   document.getElementById(`factureTVA-${id}`).value   = data.factureTVA || "";
-    if (data.factureEmail) document.getElementById(`factureEmail-${id}`).value = data.factureEmail || "";
-
-    // Facture - champs PART
-    if (data.facturePrenom) document.getElementById(`facturePrenom-${id}`).value = data.facturePrenom || "";
-    if (data.factureNom)    document.getElementById(`factureNom-${id}`).value    = data.factureNom || "";
-    if (data.factureRueP)   document.getElementById(`factureRueP-${id}`).value   = data.factureRueP || "";
-    if (data.factureCPP)    document.getElementById(`factureCPP-${id}`).value    = data.factureCPP || "";
-    if (data.factureVilleP) document.getElementById(`factureVilleP-${id}`).value = data.factureVilleP || "";
-    if (data.factureEmailP) document.getElementById(`factureEmailP-${id}`).value = data.factureEmailP || "";
-
-    // Paiement
-    if (data.paiement) document.getElementById(`facturePaiement-${id}`).value = data.paiement;
-
-    // Bouton FACTURE orange si conditions remplies
-    updateFactureIndicator(id);
-
-    // Statuts V(F)/V(P)
-    if (data.factureSent) document.getElementById(`factureSent-${id}`).classList.add("active");
-    if (data.facturePaid) document.getElementById(`facturePaid-${id}`).classList.add("active");
-  }
-
-  // Collecte des données d’un créneau
-  function collectSlotData(id){
-    const dateISO = datePicker.value;
-
-    const data = {
-      date: dateISO,
-      slotId: id,
+  window.reserve=async function(time,id){
+    document.getElementById(`lieux-${id}`).disabled=true;
+    await setDoc(doc(db,"reservations",`${datePicker.value}_${id}`),{
+      date: datePicker.value, slotId:id,
       option: document.getElementById(`selectedOption-${id}`).innerText,
       lieux: document.getElementById(`lieux-${id}`).value,
-      proPart: document.getElementById(`lieux-${id}`).dataset.propart || "",
-
-      // Note
-      note: document.getElementById(`note-${id}`).value || "",
-
-      // Facture – méta
+      note: document.getElementById(`note-${id}`).value,
       factureType: document.getElementById(`factureType-${id}`).value,
-      factureStatus: document.getElementById(`factureStatus-${id}`).value,
-
-      // Facture – PRO
-      factureFirme: document.getElementById(`factureFirme-${id}`).value || "",
-      factureRue:   document.getElementById(`factureRue-${id}`)?.value || "",
-      factureCP:    document.getElementById(`factureCP-${id}`)?.value || "",
-      factureVille: document.getElementById(`factureVille-${id}`)?.value || "",
-      factureTVA:   document.getElementById(`factureTVA-${id}`)?.value || "",
-      factureEmail: document.getElementById(`factureEmail-${id}`)?.value || "",
-
-      // Facture – PART
-      facturePrenom: document.getElementById(`facturePrenom-${id}`)?.value || "",
-      factureNom:    document.getElementById(`factureNom-${id}`)?.value || "",
-      factureRueP:   document.getElementById(`factureRueP-${id}`)?.value || "",
-      factureCPP:    document.getElementById(`factureCPP-${id}`)?.value || "",
-      factureVilleP: document.getElementById(`factureVilleP-${id}`)?.value || "",
-      factureEmailP: document.getElementById(`factureEmailP-${id}`)?.value || "",
-
-      // Paiement + statuts
-      paiement: document.getElementById(`facturePaiement-${id}`).value || "",
+      factureFirme: document.getElementById(`factureFirme-${id}`)?.value||"",
+      facturePrenom: document.getElementById(`facturePrenom-${id}`)?.value||"",
+      factureNom: document.getElementById(`factureNom-${id}`)?.value||"",
+      paiement: document.getElementById(`facturePaiement-${id}`).value,
       factureSent: document.getElementById(`factureSent-${id}`).classList.contains("active"),
-      facturePaid: document.getElementById(`facturePaid-${id}`).classList.contains("active"),
-    };
+      facturePaid: document.getElementById(`facturePaid-${id}`).classList.contains("active")
+    });
+  };
 
-    return data;
+  window.modifyReservation=function(id){document.getElementById(`lieux-${id}`).disabled=false;};
+  window.cancelReservation=async function(id){
+    await deleteDoc(doc(db,"reservations",`${datePicker.value}_${id}`));
+    document.getElementById(`selectedOption-${id}`).innerText="Choisir";
+    const lieux=document.getElementById(`lieux-${id}`); lieux.value=""; lieux.disabled=false; lieux.style.backgroundColor="white";
+    document.getElementById(`note-${id}`).value=""; document.getElementById(`noteBtn-${id}`).classList.remove("has-note"); document.getElementById(`noteBtn-${id}`).innerText="NOTE";
+    document.getElementById(`factureFirme-${id}`).value=""; document.getElementById(`facturePrenom-${id}`).value=""; document.getElementById(`factureNom-${id}`).value=""; document.getElementById(`facturePaiement-${id}`).value="";
+    document.getElementById(`factureBtn-${id}`).classList.remove("has-facture"); document.getElementById(`factureBtn-${id}`).innerText="FACTURE";
+    document.getElementById(`factureSent-${id}`).classList.remove("active"); document.getElementById(`facturePaid-${id}`).classList.remove("active");
+  };
+
+  async function loadReservations(date){
+    const snap=await getDocs(collection(db,"reservations"));
+    snap.forEach(docSnap=>{const data=docSnap.data();if(data.date===date) restoreReservation(data);});
   }
-
-  // Corriger l’affichage des blocs PRO/PART & extra en changeant type/statut
-  window.addEventListener('click', (e)=>{
-    const idMatch = String(e.target?.id || "").match(/-(\d+)-(\d+)$/);
-    if (!idMatch) return;
-    const id = `${idMatch[1]}-${idMatch[2]}`;
-    if (e.target.id === `factureType-${id}` || e.target.id === `factureStatus-${id}`){
-      toggleFactureType(id);
-      toggleFactureFields(id);
-    }
-  });
-
+  function restoreReservation(data){
+    const id=data.slotId;
+    if(data.option){document.getElementById(`selectedOption-${id}`).innerText=data.option; window.selectOption(data.option,id);}
+    if(data.lieux){const lieux=document.getElementById(`lieux-${id}`); lieux.value=data.lieux; lieux.disabled=true;}
+    if(data.note){document.getElementById(`note-${id}`).value=data.note; document.getElementById(`noteBtn-${id}`).classList.add("has-note");}
+    if(data.factureType==="PRO"){if(data.factureFirme)document.getElementById(`factureFirme-${id}`).value=data.factureFirme;}
+    if(data.factureType==="PART"){if(data.facturePrenom)document.getElementById(`facturePrenom-${id}`).value=data.facturePrenom;if(data.factureNom)document.getElementById(`factureNom-${id}`).value=data.factureNom;}
+    if(data.paiement)document.getElementById(`facturePaiement-${id}`).value=data.paiement;
+    if((data.factureFirme||data.facturePrenom||data.factureNom)&&data.paiement){document.getElementById(`factureBtn-${id}`).classList.add("has-facture");}
+    if(data.factureSent)document.getElementById(`factureSent-${id}`).classList.add("active");
+    if(data.facturePaid)document.getElementById(`facturePaid-${id}`).classList.add("active");
+  }
 </script>
 </body>
 </html>
+
 
