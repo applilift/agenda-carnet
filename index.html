@@ -52,7 +52,7 @@
   <div id="timeSlots" class="columns"></div>
 </div>
 
-<!-- Firebase + Script principal -->
+<!-- Firebase + Script -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
   import { getFirestore, doc, setDoc, getDoc, deleteDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
@@ -123,15 +123,15 @@
           <div class="form-field note-field" id="noteField-${id}">
             <button class="close-btn" onclick="toggleNote('${id}')">✖</button>
             <label for="note-${id}">Note :</label>
-            <textarea id="note-${id}" rows="2"></textarea>
+            <textarea id="note-${id}" rows="2" oninput="updateNoteIndicator('${id}')"></textarea>
           </div>
           <fieldset class="facture-fieldset" id="factureField-${id}">
             <button class="close-btn" onclick="toggleFacture('${id}')">✖</button>
             <legend>Facturation</legend>
             <label>Firme :</label>
-            <input type="text" id="factureFirme-${id}"><br>
+            <input type="text" id="factureFirme-${id}" oninput="updateFactureIndicator('${id}')"><br>
             <label>Paiement :</label>
-            <select id="facturePaiement-${id}">
+            <select id="facturePaiement-${id}" onchange="updateFactureIndicator('${id}')">
               <option value="">-- Choisir --</option>
               <option value="cash">Cash</option>
               <option value="virement">Virement</option>
@@ -157,7 +157,7 @@
     timeSlotsContainer.appendChild(column1); timeSlotsContainer.appendChild(divider); timeSlotsContainer.appendChild(column2);
   }
 
-  /* === Fonctions principales === */
+  /* === Fonctions UI === */
   window.selectOption = function(option, id) {
     document.getElementById(`selectedOption-${id}`).innerText = option;
     const lieux = document.getElementById(`lieux-${id}`);
@@ -169,58 +169,99 @@
     }
   }
 
+  window.toggleNote = function(id){
+    const f=document.getElementById(`noteField-${id}`);
+    f.style.display=(f.style.display==="none"||f.style.display==="")?"block":"none";
+  }
+
+  window.updateNoteIndicator = function(id){
+    const btn=document.getElementById(`noteBtn-${id}`);
+    const v=document.getElementById(`note-${id}`).value.trim();
+    if(v.length>0){btn.classList.add("has-note"); btn.innerText="NOTE ✎";}
+    else{btn.classList.remove("has-note"); btn.innerText="NOTE";}
+  }
+
+  window.toggleFacture = function(id){
+    const f=document.getElementById(`factureField-${id}`);
+    f.style.display=(f.style.display==="none"||f.style.display==="")?"block":"none";
+  }
+
+  window.updateFactureIndicator = function(id){
+    const btn=document.getElementById(`factureBtn-${id}`);
+    const firme=document.getElementById(`factureFirme-${id}`).value.trim();
+    const paiement=document.getElementById(`facturePaiement-${id}`).value;
+    if(firme.length>0 && paiement!==""){btn.classList.add("has-facture"); btn.innerText="FACTURE ✎";}
+    else{btn.classList.remove("has-facture"); btn.innerText="FACTURE";}
+  }
+
+  window.toggleStatus = function(type,id){
+    const el=document.getElementById(`${type}-${id}`);
+    el.classList.toggle("active");
+  }
+
+  window.selectProPart = function(type,id){
+    const pro=document.getElementById(`pro-${id}`),part=document.getElementById(`part-${id}`);
+    if(type==="PRO"){pro.style.display="block"; part.style.display="none";}
+    else{pro.style.display="none"; part.style.display="block";}
+  }
+
+  /* === Firebase : Réserver / Modifier / Annuler === */
   window.reserve = async function(time,id){
-    try {
-      document.getElementById(`lieux-${id}`).disabled=true;
-      await setDoc(doc(db,"reservations",`${datePicker.value}_${id}`),{
-        date: datePicker.value,
-        slotId: id,
-        option: document.getElementById(`selectedOption-${id}`).innerText,
-        lieux: document.getElementById(`lieux-${id}`).value,
-        note: document.getElementById(`note-${id}`).value,
-        factureFirme: document.getElementById(`factureFirme-${id}`)?.value || "",
-        paiement: document.getElementById(`facturePaiement-${id}`)?.value || "",
-        factureSent: document.getElementById(`factureSent-${id}`)?.classList.contains("active") || false,
-        facturePaid: document.getElementById(`facturePaid-${id}`)?.classList.contains("active") || false
-      });
-      console.log("✅ Réservation enregistrée dans Firestore !");
-    } catch (e) {
-      console.error("❌ Erreur Firestore :", e);
-    }
+    document.getElementById(`lieux-${id}`).disabled=true;
+    await setDoc(doc(db,"reservations",`${datePicker.value}_${id}`),{
+      date: datePicker.value,
+      slotId: id,
+      option: document.getElementById(`selectedOption-${id}`).innerText,
+      lieux: document.getElementById(`lieux-${id}`).value,
+      note: document.getElementById(`note-${id}`).value,
+      factureFirme: document.getElementById(`factureFirme-${id}`).value,
+      paiement: document.getElementById(`facturePaiement-${id}`).value,
+      factureSent: document.getElementById(`factureSent-${id}`).classList.contains("active"),
+      facturePaid: document.getElementById(`facturePaid-${id}`).classList.contains("active")
+    });
   }
 
   window.modifyReservation = function(id){
     document.getElementById(`lieux-${id}`).disabled=false;
+    document.getElementById(`pro-${id}`).style.display="block";
+    document.getElementById(`part-${id}`).style.display="block";
   }
 
   window.cancelReservation = async function(id){
-    try {
-      await deleteDoc(doc(db,"reservations",`${datePicker.value}_${id}`));
-      console.log("ℹ️ Réservation annulée dans Firestore !");
-    } catch(e) {
-      console.error("❌ Erreur suppression Firestore :", e);
-    }
+    await deleteDoc(doc(db,"reservations",`${datePicker.value}_${id}`));
     document.getElementById(`selectedOption-${id}`).innerText="Choisir";
     const lieux=document.getElementById(`lieux-${id}`);
     lieux.value=""; lieux.disabled=false; lieux.style.backgroundColor="white";
+
+    // NOTE
+    document.getElementById(`note-${id}`).value="";
+    const noteBtn=document.getElementById(`noteBtn-${id}`);
+    noteBtn.classList.remove("has-note"); noteBtn.innerText="NOTE";
+
+    // FACTURE
+    document.getElementById(`factureFirme-${id}`).value="";
+    document.getElementById(`facturePaiement-${id}`).value="";
+    const factureBtn=document.getElementById(`factureBtn-${id}`);
+    factureBtn.classList.remove("has-facture"); factureBtn.innerText="FACTURE";
+    document.getElementById(`factureSent-${id}`).classList.remove("active");
+    document.getElementById(`facturePaid-${id}`).classList.remove("active");
+
+    // PRO/PART
+    document.getElementById(`pro-${id}`).style.display="block";
+    document.getElementById(`part-${id}`).style.display="block";
   }
 
   async function loadReservations(date){
-    try {
-      const snap=await getDocs(collection(db,"reservations"));
-      snap.forEach(docSnap=>{
-        const data=docSnap.data();
-        if(data.date===date) restoreReservation(data);
-      });
-      console.log("📥 Réservations chargées pour",date);
-    } catch(e){
-      console.error("❌ Erreur chargement Firestore :", e);
-    }
+    const snap=await getDocs(collection(db,"reservations"));
+    snap.forEach(docSnap=>{
+      const data=docSnap.data();
+      if(data.date===date) restoreReservation(data);
+    });
   }
 
   function restoreReservation(data){
     const id=data.slotId;
-    if(data.option){ document.getElementById(`selectedOption-${id}`).innerText=data.option; window.selectOption(data.option,id); }
+    if(data.option){document.getElementById(`selectedOption-${id}`).innerText=data.option; window.selectOption(data.option,id);}
     if(data.lieux){const lieux=document.getElementById(`lieux-${id}`); lieux.value=data.lieux; lieux.disabled=true;}
     if(data.note){document.getElementById(`note-${id}`).value=data.note; document.getElementById(`noteBtn-${id}`).classList.add("has-note");}
     if(data.factureFirme || data.paiement){document.getElementById(`factureBtn-${id}`).classList.add("has-facture");}
@@ -231,3 +272,5 @@
 
 </body>
 </html>
+
+
