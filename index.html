@@ -52,217 +52,164 @@
   <div id="timeSlots" class="columns"></div>
 </div>
 
-<!-- Firebase + Script principal -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-  import { getFirestore, doc, setDoc, deleteDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+<script>
+const datePicker = document.getElementById('datePicker');
+const dateDisplay = document.getElementById('dateDisplay');
+const timeSlotsContainer = document.getElementById('timeSlots');
 
-  // 🔹 Config Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyAiRQYtjjPjkwiU76iqZGdnxgxjjbbaLQI",
-    authDomain: "agendacarnet.firebaseapp.com",
-    projectId: "agendacarnet",
-    storageBucket: "agendacarnet.firebasestorage.app",
-    messagingSenderId: "593717794727",
-    appId: "1:593717794727:web:e45a8b06f4e9d356b74882"
-  };
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+datePicker.value = new Date().toISOString().split('T')[0];
+datePicker.addEventListener('change', updateCalendar);
+updateCalendar();
 
-  const datePicker = document.getElementById('datePicker');
-  const dateDisplay = document.getElementById('dateDisplay');
-  const timeSlotsContainer = document.getElementById('timeSlots');
+function updateCalendar() {
+  const selectedDate = new Date(datePicker.value);
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  dateDisplay.innerText = selectedDate.toLocaleDateString('fr-FR', options);
+  generateTimeSlots(selectedDate);
+}
 
-  datePicker.value = new Date().toISOString().split('T')[0];
-  datePicker.addEventListener('change', updateCalendar);
-  updateCalendar();
+function generateTimeSlots(date) {
+  timeSlotsContainer.innerHTML = '';
+  const startHour = 6, endHour = 20;
+  const column1 = document.createElement('div');
+  const column2 = document.createElement('div');
+  column1.className = 'column'; column2.className = 'column';
+  const divider = document.createElement('div'); divider.className = 'divider';
 
-  function updateCalendar() {
-    const selectedDate = new Date(datePicker.value);
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    dateDisplay.innerText = selectedDate.toLocaleDateString('fr-FR', options);
-    generateTimeSlots(selectedDate);
-    loadReservations(datePicker.value);
-  }
+  for (let hour = startHour; hour < endHour; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const id = `${hour}-${minute}`;
+      const timeSlot = document.createElement('div');
+      timeSlot.className = 'time-slot';
+      const time = new Date(date); time.setHours(hour); time.setMinutes(minute);
+      const formattedTime = time.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-  function generateTimeSlots(date) {
-    timeSlotsContainer.innerHTML = '';
-    const startHour = 6, endHour = 20;
-    const column1 = document.createElement('div');
-    const column2 = document.createElement('div');
-    column1.className = 'column'; column2.className = 'column';
-    const divider = document.createElement('div'); divider.className = 'divider';
+      const proPartContainer = document.createElement('div');
+      proPartContainer.className = 'pro-part-container';
+      proPartContainer.innerHTML = `
+        <button id="pro-${id}" class="pro-part-button" onclick="selectProPart('PRO','${id}')">PRO</button>
+        <button id="part-${id}" class="pro-part-button" onclick="selectProPart('PART','${id}')">PART</button>
+      `;
 
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const id = `${hour}-${minute}`;
-        const timeSlot = document.createElement('div');
-        timeSlot.className = 'time-slot';
-        const time = new Date(date); time.setHours(hour); time.setMinutes(minute);
-        const formattedTime = time.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const slotContent = document.createElement('div');
+      slotContent.className = 'reservation-form';
+      slotContent.innerHTML = `
+        <div>${formattedTime} - <span class="selected-option" id="selectedOption-${id}">Choisir</span></div>
+        <button class="lift-express" onclick="selectOption('LIFT EXPRESS','${id}')">LIFT EXPRESS</button>
+        <button class="lift" onclick="selectOption('# LIFT','${id}')"><strong># LIFT</strong></button>
+        <button class="rdv-perso" onclick="selectOption('RDV PERSO','${id}')"><strong>RDV PERSO</strong></button>
+        <button class="pause" onclick="selectOption('PAUSE','${id}')"><strong>PAUSE</strong></button>
+        <button id="noteBtn-${id}" class="note-btn" onclick="toggleNote('${id}')">NOTE</button>
+        <button id="factureBtn-${id}" class="facture-btn" onclick="toggleFacture('${id}')">FACTURE</button>
+        <span id="factureSent-${id}" class="facture-status" onclick="toggleStatus('factureSent','${id}')">V(F)</span>
+        <span id="facturePaid-${id}" class="facture-status" onclick="toggleStatus('facturePaid','${id}')">V(P)</span>
+        <div class="form-field note-field" id="noteField-${id}">
+          <button class="close-btn" onclick="toggleNote('${id}')">✖</button>
+          <label for="note-${id}">Note :</label>
+          <textarea id="note-${id}" rows="2"></textarea>
+        </div>
+        <fieldset class="facture-fieldset" id="factureField-${id}">
+          <button class="close-btn" onclick="toggleFacture('${id}')">✖</button>
+          <legend>Facturation</legend>
+          <label>Firme :</label>
+          <input type="text" id="factureFirme-${id}"><br>
+          <label>Paiement :</label>
+          <select id="facturePaiement-${id}">
+            <option value="">-- Choisir --</option>
+            <option value="cash">Cash</option>
+            <option value="virement">Virement</option>
+            <option value="non">Non payé</option>
+          </select>
+        </fieldset>
+        <div class="form-field">
+          <label for="lieux-${id}">Lieux :</label>
+          <textarea id="lieux-${id}" rows="2" style="background:white"></textarea>
+        </div>
+        <button onclick="reserve('${formattedTime}','${id}')">Réserver</button>
+        <button onclick="modifyReservation('${id}')">Modifier</button>
+        <button onclick="cancelReservation('${id}')">Annuler</button>
+      `;
+      timeSlot.appendChild(proPartContainer);
+      timeSlot.appendChild(slotContent);
 
-        const proPartContainer = document.createElement('div');
-        proPartContainer.className = 'pro-part-container';
-        proPartContainer.innerHTML = `
-          <button id="pro-${id}" class="pro-part-button" onclick="selectProPart('PRO','${id}')">PRO</button>
-          <button id="part-${id}" class="pro-part-button" onclick="selectProPart('PART','${id}')">PART</button>
-        `;
-
-        const slotContent = document.createElement('div');
-        slotContent.className = 'reservation-form';
-        slotContent.innerHTML = `
-          <div>${formattedTime} - <span class="selected-option" id="selectedOption-${id}">Choisir</span></div>
-          <button class="lift-express" onclick="selectOption('LIFT EXPRESS','${id}')">LIFT EXPRESS</button>
-          <button class="lift" onclick="selectOption('# LIFT','${id}')"><strong># LIFT</strong></button>
-          <button class="rdv-perso" onclick="selectOption('RDV PERSO','${id}')"><strong>RDV PERSO</strong></button>
-          <button class="pause" onclick="selectOption('PAUSE','${id}')"><strong>PAUSE</strong></button>
-          <button id="noteBtn-${id}" class="note-btn" onclick="toggleNote('${id}')">NOTE</button>
-          <button id="factureBtn-${id}" class="facture-btn" onclick="toggleFacture('${id}')">FACTURE</button>
-          <span id="factureSent-${id}" class="facture-status" onclick="toggleStatus('factureSent','${id}')">V(F)</span>
-          <span id="facturePaid-${id}" class="facture-status" onclick="toggleStatus('facturePaid','${id}')">V(P)</span>
-          <div class="form-field note-field" id="noteField-${id}">
-            <button class="close-btn" onclick="toggleNote('${id}')">✖</button>
-            <label for="note-${id}">Note :</label>
-            <textarea id="note-${id}" rows="2" oninput="updateNoteIndicator('${id}')"></textarea>
-          </div>
-          <fieldset class="facture-fieldset" id="factureField-${id}">
-            <button class="close-btn" onclick="toggleFacture('${id}')">✖</button>
-            <legend>Facturation</legend>
-            <label>Firme :</label>
-            <input type="text" id="factureFirme-${id}" oninput="updateFactureIndicator('${id}')"><br>
-            <label>Paiement :</label>
-            <select id="facturePaiement-${id}" onchange="updateFactureIndicator('${id}')">
-              <option value="">-- Choisir --</option>
-              <option value="cash">Cash</option>
-              <option value="virement">Virement</option>
-              <option value="non">Non payé</option>
-            </select>
-          </fieldset>
-          <div class="form-field">
-            <label for="lieux-${id}">Lieux :</label>
-            <textarea id="lieux-${id}" rows="2" style="background:white"></textarea>
-          </div>
-          <button onclick="reserve('${formattedTime}','${id}')">Réserver</button>
-          <button onclick="modifyReservation('${id}')">Modifier</button>
-          <button onclick="cancelReservation('${id}')">Annuler</button>
-        `;
-        timeSlot.appendChild(proPartContainer);
-        timeSlot.appendChild(slotContent);
-
-        const horizontalLine=document.createElement('div'); horizontalLine.className='horizontal-line';
-        if(minute===0){column1.appendChild(timeSlot); column1.appendChild(horizontalLine);}
-        else{column2.appendChild(timeSlot); column2.appendChild(horizontalLine);}
-      }
-    }
-    timeSlotsContainer.appendChild(column1); timeSlotsContainer.appendChild(divider); timeSlotsContainer.appendChild(column2);
-  }
-
-  /* === Fonctions principales === */
-  window.selectOption = function(option, id) {
-    document.getElementById(`selectedOption-${id}`).innerText = option;
-    const lieux = document.getElementById(`lieux-${id}`);
-    switch(option){
-      case 'LIFT EXPRESS': lieux.style.backgroundColor='rgba(255,99,71,0.5)'; break;
-      case '# LIFT': lieux.style.backgroundColor='rgba(144,238,144,0.5)'; break;
-      case 'RDV PERSO': lieux.style.backgroundColor='rgba(255,165,0,0.5)'; break;
-      case 'PAUSE': lieux.style.backgroundColor='rgba(173,216,230,0.5)'; break;
+      const horizontalLine=document.createElement('div'); horizontalLine.className='horizontal-line';
+      if(minute===0){column1.appendChild(timeSlot); column1.appendChild(horizontalLine);}
+      else{column2.appendChild(timeSlot); column2.appendChild(horizontalLine);}
     }
   }
+  timeSlotsContainer.appendChild(column1); timeSlotsContainer.appendChild(divider); timeSlotsContainer.appendChild(column2);
+}
 
-  window.toggleNote = function(id){
-    const f=document.getElementById(`noteField-${id}`);
-    f.style.display=(f.style.display==="none"||f.style.display==="")?"block":"none";
+// === Fonctions ===
+function selectOption(option, id) {
+  document.getElementById(`selectedOption-${id}`).innerText = option;
+  const lieux = document.getElementById(`lieux-${id}`);
+  switch(option){
+    case 'LIFT EXPRESS': lieux.style.backgroundColor='rgba(255,99,71,0.5)'; break;
+    case '# LIFT': lieux.style.backgroundColor='rgba(144,238,144,0.5)'; break;
+    case 'RDV PERSO': lieux.style.backgroundColor='rgba(255,165,0,0.5)'; break;
+    case 'PAUSE': lieux.style.backgroundColor='rgba(173,216,230,0.5)'; break;
   }
+}
 
-  window.updateNoteIndicator = function(id){
-    const btn=document.getElementById(`noteBtn-${id}`);
-    const v=document.getElementById(`note-${id}`).value.trim();
-    if(v.length>0){btn.classList.add("has-note");btn.innerText="NOTE ✎";}
-    else{btn.classList.remove("has-note");btn.innerText="NOTE";}
-  }
+function toggleNote(id){
+  const f=document.getElementById(`noteField-${id}`);
+  f.style.display=(f.style.display==="none"||f.style.display==="")?"block":"none";
+}
+function toggleFacture(id){
+  const f=document.getElementById(`factureField-${id}`);
+  f.style.display=(f.style.display==="none"||f.style.display==="")?"block":"none";
+}
+function toggleStatus(type,id){
+  const el=document.getElementById(`${type}-${id}`);
+  el.classList.toggle("active");
+}
+function selectProPart(type,id){
+  const pro=document.getElementById(`pro-${id}`),
+        part=document.getElementById(`part-${id}`);
+  if(type==="PRO"){pro.style.display="block";part.style.display="none";}
+  else{pro.style.display="none";part.style.display="block";}
+}
 
-  window.toggleFacture = function(id){
-    const f=document.getElementById(`factureField-${id}`);
-    f.style.display=(f.style.display==="none"||f.style.display==="")?"block":"none";
-  }
+// Réserver / Modifier / Annuler
+function reserve(time,id){
+  const lieux=document.getElementById(`lieux-${id}`);
+  if(!lieux.value){alert("Veuillez entrer un lieu.");return;}
+  alert(`Réservation confirmée pour ${time}.\nLieu: ${lieux.value}`);
+  lieux.disabled=true;
+}
+function modifyReservation(id){
+  document.getElementById(`lieux-${id}`).disabled=false;
+  document.getElementById(`pro-${id}`).style.display="block";
+  document.getElementById(`part-${id}`).style.display="block";
+}
+function cancelReservation(id){
+  document.getElementById(`selectedOption-${id}`).innerText="Choisir";
+  const lieux=document.getElementById(`lieux-${id}`);
+  lieux.value=""; 
+  lieux.disabled=false;
+  lieux.style.backgroundColor="white"; // ✅ Correction couleur
 
-  window.updateFactureIndicator = function(id){
-    const btn=document.getElementById(`factureBtn-${id}`);
-    const firme=document.getElementById(`factureFirme-${id}`).value.trim();
-    const paiement=document.getElementById(`facturePaiement-${id}`).value;
-    if(firme.length>0 && paiement!==""){btn.classList.add("has-facture");btn.innerText="FACTURE ✎";}
-    else{btn.classList.remove("has-facture");btn.innerText="FACTURE";}
-  }
+  // Reset PRO/PART
+  document.getElementById(`pro-${id}`).style.display="block";
+  document.getElementById(`part-${id}`).style.display="block";
 
-  window.toggleStatus = function(type,id){
-    document.getElementById(`${type}-${id}`).classList.toggle("active");
-  }
+  // Reset NOTE
+  document.getElementById(`note-${id}`).value="";
+  const noteBtn=document.getElementById(`noteBtn-${id}`);
+  noteBtn.classList.remove("has-note");
+  noteBtn.innerText="NOTE";
 
-  window.selectProPart = function(type,id){
-    const pro=document.getElementById(`pro-${id}`);
-    const part=document.getElementById(`part-${id}`);
-    if(type==="PRO"){pro.style.display="block";part.style.display="none";}
-    else{pro.style.display="none";part.style.display="block";}
-  }
-
-  window.reserve = async function(time,id){
-    document.getElementById(`lieux-${id}`).disabled=true;
-    await setDoc(doc(db,"reservations",`${datePicker.value}_${id}`),{
-      date: datePicker.value,
-      slotId: id,
-      option: document.getElementById(`selectedOption-${id}`).innerText,
-      lieux: document.getElementById(`lieux-${id}`).value,
-      note: document.getElementById(`note-${id}`).value,
-      factureFirme: document.getElementById(`factureFirme-${id}`).value,
-      paiement: document.getElementById(`facturePaiement-${id}`).value,
-      factureSent: document.getElementById(`factureSent-${id}`).classList.contains("active"),
-      facturePaid: document.getElementById(`facturePaid-${id}`).classList.contains("active")
-    });
-  }
-
-  window.modifyReservation = function(id){
-    document.getElementById(`lieux-${id}`).disabled=false;
-    document.getElementById(`pro-${id}`).style.display="block";
-    document.getElementById(`part-${id}`).style.display="block";
-  }
-
-  window.cancelReservation = async function(id){
-    await deleteDoc(doc(db,"reservations",`${datePicker.value}_${id}`));
-    document.getElementById(`selectedOption-${id}`).innerText="Choisir";
-    const lieux=document.getElementById(`lieux-${id}`);
-    lieux.value=""; lieux.disabled=false; lieux.style.backgroundColor="white";
-    document.getElementById(`note-${id}`).value="";
-    document.getElementById(`noteBtn-${id}`).classList.remove("has-note");
-    document.getElementById(`noteBtn-${id}`).innerText="NOTE";
-    document.getElementById(`factureFirme-${id}`).value="";
-    document.getElementById(`facturePaiement-${id}`).value="";
-    const factureBtn=document.getElementById(`factureBtn-${id}`);
-    factureBtn.classList.remove("has-facture");
-    factureBtn.innerText="FACTURE";
-    document.getElementById(`factureSent-${id}`).classList.remove("active");
-    document.getElementById(`facturePaid-${id}`).classList.remove("active");
-  }
-
-  async function loadReservations(date){
-    const snap=await getDocs(collection(db,"reservations"));
-    snap.forEach(docSnap=>{
-      const data=docSnap.data();
-      if(data.date===date) restoreReservation(data);
-    });
-  }
-
-  function restoreReservation(data){
-    const id=data.slotId;
-    if(data.option){ document.getElementById(`selectedOption-${id}`).innerText=data.option; window.selectOption(data.option,id); }
-    if(data.lieux){const lieux=document.getElementById(`lieux-${id}`); lieux.value=data.lieux; lieux.disabled=true;}
-    if(data.note){document.getElementById(`note-${id}`).value=data.note; document.getElementById(`noteBtn-${id}`).classList.add("has-note");}
-    if(data.factureFirme || data.paiement){document.getElementById(`factureBtn-${id}`).classList.add("has-facture");}
-    if(data.factureSent) document.getElementById(`factureSent-${id}`).classList.add("active");
-    if(data.facturePaid) document.getElementById(`facturePaid-${id}`).classList.add("active");
-  }
+  // Reset FACTURE
+  document.getElementById(`factureFirme-${id}`).value="";
+  document.getElementById(`facturePaiement-${id}`).value="";
+  const factureBtn=document.getElementById(`factureBtn-${id}`);
+  factureBtn.classList.remove("has-facture");
+  factureBtn.innerText="FACTURE";
+  document.getElementById(`factureSent-${id}`).classList.remove("active");
+  document.getElementById(`facturePaid-${id}`).classList.remove("active");
+}
 </script>
 
 </body>
 </html>
-
-
