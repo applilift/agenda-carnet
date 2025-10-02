@@ -1,318 +1,668 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Carnet de Bord - Agenda</title>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; }
-    .calendar { max-width: 1000px; margin: auto; text-align: center; padding:10px; }
-    .date { font-size: 26px; margin: 15px 0; font-weight: bold; }
-    input[type="date"] { font-size: 18px; padding: 8px; max-width: 280px; margin-bottom: 15px; }
-    .time-slot { margin: 10px 0; text-align: left; display: flex; justify-content: flex-start; align-items: flex-start; }
-    button { padding: 5px 10px; margin: 2px; cursor: pointer; }
-    .reservation-form { margin: 5px 0; flex-grow: 1; margin-left: 10px; }
-    .form-field { margin-bottom: 5px; }
-    .form-field input, .form-field textarea, .form-field select { width: 100%; padding: 6px; box-sizing: border-box; }
-    .columns { display: flex; justify-content: space-between; flex-wrap: wrap; }
-    .column { width: 48%; }
-    @media (max-width: 768px) {
-      .column { width: 100%; } /* ✅ Sur mobile les colonnes passent l'une sous l'autre */
+    /* ---------- Base ---------- */
+    :root{
+      --purple: mediumorchid;
+      --note-on: orange;
+      --btn-dark: darkslateblue;
+      --blue: rgb(0,102,204);
+      --green: #2e8b57;
+      --danger: tomato;
+      --orange: orange;
+      --softblue: rgba(173,216,230,0.5);
+      --lift: rgba(144,238,144,0.5);
+      --liftx: rgba(255,99,71,0.5);
+      --perso: rgba(255,165,0,0.5);
     }
-    .lift-express { color: red; font-weight: bold; }
-    .lift { color: green; font-weight: bold; }
-    .rdv-perso { color: orange; font-weight: bold; }
-    .pause { background-color: white; color: rgb(0,102,204); border: 1px solid blue; font-weight: bold; }
-    .note-btn, .facture-btn { background-color: darkslateblue; color: white; border: none; font-weight: bold; }
-    .note-btn.has-note, .facture-btn.has-facture { background-color: orange; }
-    .facture-status {
-      display: inline-block; margin-left: 4px; padding: 2px 6px;
-      border: 1px solid #666; border-radius: 4px; font-size: 11px;
-      cursor: pointer; background: #eee; color: #333;
+    *{box-sizing:border-box}
+    body{font-family:Arial, sans-serif; margin:0; padding:16px; background:#fafafa;}
+    .calendar{max-width:1000px; margin:auto;}
+    .date{font-size:30px; margin:16px 0; font-weight:bold; text-align:center;}
+    input[type="date"]{font-size:18px; padding:10px; max-width:300px; display:block; margin:0 auto 12px auto;}
+    button{padding:6px 12px; margin:2px; cursor:pointer; border:1px solid #ddd; background:#fff; border-radius:6px;}
+    button:active{transform:translateY(1px)}
+    .selected-option{font-weight:bold;}
+    .horizontal-line{height:2px; background:#ccc; margin:10px 0;}
+
+    /* ---------- Grille d'heures (mobile = 1 colonne, desktop = 2 colonnes) ---------- */
+    .hours-wrapper{display:flex; flex-direction:column; gap:12px;}
+    .hour-row{display:flex; flex-direction:column; gap:12px;}
+    /* Chaque créneau */
+    .time-slot{display:flex; align-items:flex-start; gap:10px;}
+    .reservation-form{flex:1}
+    .column-title{display:none}
+
+    /* Boutons typés */
+    .lift-express{color: var(--danger); font-weight:bold;}
+    .lift{color: var(--green); font-weight:bold;}
+    .rdv-perso{color: var(--orange); font-weight:bold;}
+    .pause{background:#fff; color: var(--blue); border:1px solid var(--blue); font-weight:bold;}
+
+    /* PRO/PART à gauche */
+    .pro-part-container{display:flex; flex-direction:column; gap:6px; min-width:72px}
+    .pro-part-button{background: var(--purple); color:#fff; font-weight:bold; border:none; padding:6px 10px; border-radius:6px}
+    .pro-part-button.off{opacity:.35}
+
+    /* NOTE + FACTURE */
+    .note-btn, .facture-btn{background: var(--btn-dark); color:#fff; border:none; font-weight:bold;}
+    .note-btn.has-note, .facture-btn.has-facture{background: var(--note-on); color:#000;}
+    .note-field, .facture-fieldset{display:none; margin-top:6px; padding:10px; border:1px solid #999; background:#f9f9f9; position:relative; border-radius:8px;}
+    .note-field textarea{width:100%}
+    .close-btn{position:absolute; top:6px; right:8px; background:none; border:none; color:#666; font-size:16px; cursor:pointer;}
+    .close-btn:hover{color:red;}
+
+    /* Facture statuts mini-badges */
+    .facture-status{
+      display:inline-block; margin-left:4px; padding:2px 6px; border:1px solid #666; border-radius:4px;
+      font-size:11px; cursor:pointer; background:#eee; color:#333;
     }
-    .facture-status.active { background: green; color: white; font-weight: bold; }
-    .selected-option { font-weight: bold; }
-    .horizontal-line { width: 100%; height: 2px; background: #ccc; margin: 10px 0; }
-    .pro-part-container { display: flex; flex-direction: column; margin-right: 10px; }
-    .pro-part-button { background-color: mediumorchid; color: white; font-weight: bold; border: none; padding: 5px 10px; margin: 2px 0; cursor: pointer; border-radius: 5px; }
-    .note-field, .facture-fieldset { display: none; margin-top: 5px; padding: 10px; border: 1px solid #999; background: #f9f9f9; position: relative; }
-    .close-btn { position: absolute; top: 2px; right: 5px; background: none; border: none; color: #666; font-size: 14px; cursor: pointer; }
-    .close-btn:hover { color: red; }
+    .facture-status.active{background:green; color:#fff; font-weight:bold;}
+
+    .form-field{margin:8px 0}
+    .form-field input, .form-field textarea, .form-field select{width:100%; padding:6px; border:1px solid #ccc; border-radius:6px}
+
+    /* Mobile prioritaire : une colonne, ordre chronologique 06:00 puis 06:30, etc. */
+    /* Desktop : 2 colonnes par ligne (06:00 à gauche, 06:30 à droite) */
+    @media (min-width: 900px){
+      .hour-row{
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        gap:16px;
+        align-items:start;
+      }
+      .column-title{
+        display:block; grid-column:1 / -1; font-size:16px; color:#666; margin-bottom:-8px;
+      }
+    }
   </style>
 </head>
 <body>
+  <div class="calendar">
+    <input type="date" id="datePicker" />
+    <div class="date" id="dateDisplay"></div>
 
-<div class="calendar">
-  <input type="date" id="datePicker">
-  <div class="date" id="dateDisplay"></div>
-  <div id="timeSlots" class="columns"></div>
-</div>
+    <!-- Grille contenant des "hour-row". Chaque row = 06:00 (col 1) + 06:30 (col 2) -->
+    <div id="hoursWrapper" class="hours-wrapper"></div>
+  </div>
 
-<!-- Firebase + Script principal -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-  import { getFirestore, doc, setDoc, deleteDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+  <!-- Firebase + Script principal -->
+  <script type="module">
+    /* ---------------- Firebase ---------------- */
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import {
+      getFirestore, doc, setDoc, getDoc, deleteDoc, getDocs, collection, query, where
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAiRQYtjjPjkwiU76iqZGdnxgxjjbbaLQI",
-    authDomain: "agendacarnet.firebaseapp.com",
-    projectId: "agendacarnet",
-    storageBucket: "agendacarnet.firebasestorage.app",
-    messagingSenderId: "593717794727",
-    appId: "1:593717794727:web:e45a8b06f4e9d356b74882"
-  };
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    const firebaseConfig = {
+      apiKey: "AIzaSyAiRQYtjjPjkwiU76iqZGdnxgxjjbbaLQI",
+      authDomain: "agendacarnet.firebaseapp.com",
+      projectId: "agendacarnet",
+      storageBucket: "agendacarnet.firebasestorage.app",
+      messagingSenderId: "593717794727",
+      appId: "1:593717794727:web:e45a8b06f4e9d356b74882"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  const datePicker = document.getElementById('datePicker');
-  const dateDisplay = document.getElementById('dateDisplay');
-  const timeSlotsContainer = document.getElementById('timeSlots');
+    /* ---------------- DOM ---------------- */
+    const datePicker = document.getElementById('datePicker');
+    const dateDisplay = document.getElementById('dateDisplay');
+    const hoursWrapper = document.getElementById('hoursWrapper');
 
-  datePicker.value = new Date().toISOString().split('T')[0];
-  datePicker.addEventListener('change', updateCalendar);
-  updateCalendar();
+    /* ---------------- Init ---------------- */
+    datePicker.value = new Date().toISOString().split('T')[0];
+    datePicker.addEventListener('change', updateCalendar);
+    updateCalendar();
 
-  function updateCalendar() {
-    const selectedDate = new Date(datePicker.value);
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    dateDisplay.innerText = selectedDate.toLocaleDateString('fr-FR', options);
-    generateTimeSlots(selectedDate);
-    loadReservations(datePicker.value);
-  }
+    function updateCalendar(){
+      const selectedDate = new Date(datePicker.value);
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      dateDisplay.innerText = selectedDate.toLocaleDateString('fr-FR', options);
 
-  function generateTimeSlots(date) {
-    timeSlotsContainer.innerHTML = '';
-    const startHour = 6, endHour = 20;
-    const column1 = document.createElement('div');
-    const column2 = document.createElement('div');
-    column1.className = 'column'; column2.className = 'column';
+      generateTimeGrid(selectedDate);
+      loadReservations(datePicker.value);
+    }
 
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const id = `${hour}-${minute}`;
-        const timeSlot = document.createElement('div');
-        timeSlot.className = 'time-slot';
-        const time = new Date(date); time.setHours(hour); time.setMinutes(minute);
-        const formattedTime = time.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    /* =========================
+       Génération de la grille
+       Une "hour-row" par heure :
+       - col 1 = HH:00
+       - col 2 = HH:30
+       Sur mobile, ce sera vertical (ordre HH:00 puis HH:30), donc chronologique ✅
+    ========================== */
+    function generateTimeGrid(date){
+      hoursWrapper.innerHTML = "";
+      const startHour = 6, endHour = 20;
 
-        // PRO/PART
-        const proPartContainer = document.createElement('div');
-        proPartContainer.className = 'pro-part-container';
-        proPartContainer.innerHTML = `
-          <button id="pro-${id}" class="pro-part-button" onclick="selectProPart('PRO','${id}')">PRO</button>
-          <button id="part-${id}" class="pro-part-button" onclick="selectProPart('PART','${id}')">PART</button>
-        `;
+      for(let hour = startHour; hour < endHour; hour++){
+        const row = document.createElement('div');
+        row.className = 'hour-row';
 
-        // Contenu principal
-        const slotContent = document.createElement('div');
-        slotContent.className = 'reservation-form';
-        slotContent.innerHTML = `
-          <div>${formattedTime} - <span class="selected-option" id="selectedOption-${id}">Choisir</span></div>
-          <button class="lift-express" onclick="selectOption('LIFT EXPRESS','${id}')">LIFT EXPRESS</button>
-          <button class="lift" onclick="selectOption('# LIFT','${id}')"><strong># LIFT</strong></button>
-          <button class="rdv-perso" onclick="selectOption('RDV PERSO','${id}')"><strong>RDV PERSO</strong></button>
-          <button class="pause" onclick="selectOption('PAUSE','${id}')"><strong>PAUSE</strong></button>
-          <button id="noteBtn-${id}" class="note-btn" onclick="toggleNote('${id}')">NOTE</button>
-          <button id="factureBtn-${id}" class="facture-btn" onclick="toggleFacture('${id}')">FACTURE</button>
-          <span id="factureSent-${id}" class="facture-status" onclick="toggleStatus('factureSent','${id}')">V(F)</span>
-          <span id="facturePaid-${id}" class="facture-status" onclick="toggleStatus('facturePaid','${id}')">V(P)</span>
+        // 06:00
+        const slot00 = buildTimeSlot(date, hour, 0);
+        // Ligne séparatrice visuelle (fine)
+        const sep = document.createElement('div');
+        sep.className = 'horizontal-line';
+        // 06:30
+        const slot30 = buildTimeSlot(date, hour, 30);
 
-          <!-- NOTE -->
-          <div class="form-field note-field" id="noteField-${id}">
-            <button class="close-btn" onclick="toggleNote('${id}')">✖</button>
-            <label>Note :</label>
-            <textarea id="note-${id}" rows="2"></textarea>
-          </div>
+        // Sur desktop, 2 colonnes; sur mobile, vertical (slot00 → sep → slot30)
+        row.appendChild(slot00);
+        row.appendChild(slot30);
 
-          <!-- FACTURE -->
-          <fieldset class="facture-fieldset" id="factureField-${id}">
-            <button class="close-btn" onclick="toggleFacture('${id}')">✖</button>
-            <legend>Facturation</legend>
-            <label>Type client :</label>
-            <select id="factureType-${id}" onchange="toggleFactureType('${id}')">
-              <option value="PRO">PRO</option>
-              <option value="PART">PARTICULIER</option>
-            </select><br>
-            <label>Statut client :</label>
-            <select id="factureStatus-${id}" onchange="toggleFactureFields('${id}')">
-              <option value="encore">Pas encodé</option>
-              <option value="deja">Déjà encodé</option>
-            </select><br>
-
-            <!-- Bloc PRO -->
-            <div id="facturePro-${id}">
-              <label>Nom de la firme (obligatoire) :</label>
-              <input type="text" id="factureFirme-${id}" oninput="updateFactureIndicator('${id}')"><br>
-              <div class="extra-facture" id="extraPro-${id}">
-                <label>Rue :</label><input type="text" id="factureRue-${id}"><br>
-                <label>Code postal :</label><input type="text" id="factureCP-${id}"><br>
-                <label>Ville :</label><input type="text" id="factureVille-${id}"><br>
-                <label>Numéro TVA :</label><input type="text" id="factureTVA-${id}"><br>
-                <label>Email :</label><input type="email" id="factureEmail-${id}"><br>
-              </div>
-            </div>
-
-            <!-- Bloc PART -->
-            <div id="facturePart-${id}" style="display:none;">
-              <label>Prénom (obligatoire) :</label>
-              <input type="text" id="facturePrenom-${id}" oninput="updateFactureIndicator('${id}')"><br>
-              <label>Nom (obligatoire) :</label>
-              <input type="text" id="factureNom-${id}" oninput="updateFactureIndicator('${id}')"><br>
-              <div class="extra-facture" id="extraPart-${id}">
-                <label>Rue :</label><input type="text" id="factureRueP-${id}"><br>
-                <label>Code postal :</label><input type="text" id="factureCPP-${id}"><br>
-                <label>Ville :</label><input type="text" id="factureVilleP-${id}"><br>
-                <label>Email :</label><input type="email" id="factureEmailP-${id}"><br>
-              </div>
-            </div>
-
-            <label>Mode de paiement (obligatoire) :</label>
-            <select id="facturePaiement-${id}" onchange="updateFactureIndicator('${id}')">
-              <option value="">-- Choisir --</option>
-              <option value="cash">Cash</option>
-              <option value="virement">Virement</option>
-              <option value="non">Non payé</option>
-            </select>
-          </fieldset>
-
-          <div class="form-field">
-            <label for="lieux-${id}">Lieux :</label>
-            <textarea id="lieux-${id}" rows="2" style="background:white"></textarea>
-          </div>
-          <button onclick="reserve('${formattedTime}','${id}')">Réserver</button>
-          <button onclick="modifyReservation('${id}')">Modifier</button>
-          <button onclick="cancelReservation('${id}')">Annuler</button>
-        `;
-        timeSlot.appendChild(proPartContainer);
-        timeSlot.appendChild(slotContent);
-
-        const line = document.createElement('div');
-        line.className='horizontal-line';
-        (minute===0?column1:column2).appendChild(timeSlot);
-        (minute===0?column1:column2).appendChild(line);
+        hoursWrapper.appendChild(row);
+        // Petite ligne après la row (global)
+        const bigSep = document.createElement('div');
+        bigSep.className = 'horizontal-line';
+        hoursWrapper.appendChild(bigSep);
       }
     }
-    timeSlotsContainer.appendChild(column1);
-    timeSlotsContainer.appendChild(column2);
-  }
 
-  /* === Fonctions === */
-  window.selectOption = function(option, id) {
-    document.getElementById(`selectedOption-${id}`).innerText = option;
-    const lieux = document.getElementById(`lieux-${id}`);
-    switch(option){
-      case 'LIFT EXPRESS': lieux.style.backgroundColor='rgba(255,99,71,0.5)'; break;
-      case '# LIFT': lieux.style.backgroundColor='rgba(144,238,144,0.5)'; break;
-      case 'RDV PERSO': lieux.style.backgroundColor='rgba(255,165,0,0.5)'; break;
-      case 'PAUSE': lieux.style.backgroundColor='rgba(173,216,230,0.5)'; break;
+    function buildTimeSlot(baseDate, hour, minute){
+      const slotId = `${hour}-${minute}`;
+      const time = new Date(baseDate);
+      time.setHours(hour); time.setMinutes(minute);
+      const formatted = time.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+      const wrap = document.createElement('div');
+      wrap.className = 'time-slot';
+      wrap.setAttribute('data-slot-id', slotId);
+      // on mémorise le type client choisi (PRO/PART) au niveau du slot
+      wrap.dataset.clientType = ""; // "", "PRO" ou "PART"
+
+      // Colonne gauche : PRO/PART
+      const proPart = document.createElement('div');
+      proPart.className = 'pro-part-container';
+      proPart.innerHTML = `
+        <button id="pro-${slotId}" class="pro-part-button" type="button">PRO</button>
+        <button id="part-${slotId}" class="pro-part-button" type="button">PART</button>
+      `;
+
+      // Colonne droite : contenu principal
+      const content = document.createElement('div');
+      content.className = 'reservation-form';
+      content.innerHTML = `
+        <div>${formatted} - <span class="selected-option" id="selectedOption-${slotId}">Choisir</span></div>
+
+        <button class="lift-express" type="button">LIFT EXPRESS</button>
+        <button class="lift" type="button"><strong># LIFT</strong></button>
+        <button class="rdv-perso" type="button"><strong>RDV PERSO</strong></button>
+        <button class="pause" type="button"><strong>PAUSE</strong></button>
+
+        <button id="noteBtn-${slotId}" class="note-btn" type="button">NOTE</button>
+        <button id="factureBtn-${slotId}" class="facture-btn" type="button">FACTURE</button>
+        <span id="factureSent-${slotId}" class="facture-status">V(F)</span>
+        <span id="facturePaid-${slotId}" class="facture-status">V(P)</span>
+
+        <!-- NOTE -->
+        <div class="form-field note-field" id="noteField-${slotId}">
+          <button class="close-btn" type="button">✖</button>
+          <label for="note-${slotId}">Note :</label>
+          <textarea id="note-${slotId}" rows="2"></textarea>
+        </div>
+
+        <!-- FACTURE (pilotée par PRO/PART à gauche) -->
+        <fieldset class="facture-fieldset" id="factureField-${slotId}">
+          <button class="close-btn" type="button">✖</button>
+          <legend>Facturation</legend>
+
+          <label>Statut client :</label>
+          <select id="factureStatus-${slotId}">
+            <option value="encore">Ce client n'est pas encodé</option>
+            <option value="deja">Ce client est déjà encodé</option>
+          </select><br>
+
+          <!-- PRO -->
+          <div id="facturePro-${slotId}">
+            <div class="form-field">
+              <label>Nom de la firme (obligatoire) :</label>
+              <input type="text" id="factureFirme-${slotId}">
+            </div>
+            <div class="form-field extra-pro" id="extraPro-${slotId}">
+              <label>Rue :</label><input type="text" id="factureRue-${slotId}"><br>
+              <label>Code postal :</label><input type="text" id="factureCP-${slotId}"><br>
+              <label>Ville :</label><input type="text" id="factureVille-${slotId}"><br>
+              <label>Numéro TVA :</label><input type="text" id="factureTVA-${slotId}"><br>
+              <label>Email :</label><input type="email" id="factureEmail-${slotId}"><br>
+            </div>
+          </div>
+
+          <!-- PART -->
+          <div id="facturePart-${slotId}" style="display:none;">
+            <div class="form-field">
+              <label>Prénom (obligatoire) :</label>
+              <input type="text" id="facturePrenom-${slotId}">
+            </div>
+            <div class="form-field">
+              <label>Nom (obligatoire) :</label>
+              <input type="text" id="factureNom-${slotId}">
+            </div>
+            <div class="form-field extra-part" id="extraPart-${slotId}">
+              <label>Rue :</label><input type="text" id="factureRueP-${slotId}"><br>
+              <label>Code postal :</label><input type="text" id="factureCPP-${slotId}"><br>
+              <label>Ville :</label><input type="text" id="factureVilleP-${slotId}"><br>
+              <label>Email :</label><input type="email" id="factureEmailP-${slotId}"><br>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>Mode de paiement (obligatoire) :</label>
+            <select id="facturePaiement-${slotId}">
+              <option value="">-- Choisir --</option>
+              <option value="cash">Payé cash</option>
+              <option value="virement">Payé virement</option>
+              <option value="non">Non payé</option>
+            </select>
+          </div>
+        </fieldset>
+
+        <div class="form-field">
+          <label for="lieux-${slotId}">Lieux :</label>
+          <textarea id="lieux-${slotId}" rows="2" style="background-color:white"></textarea>
+        </div>
+
+        <button class="btn-reserver" type="button">Réserver</button>
+        <button class="btn-modifier" type="button">Modifier</button>
+        <button class="btn-annuler" type="button">Annuler</button>
+      `;
+
+      // Attache
+      wrap.appendChild(proPart);
+      wrap.appendChild(content);
+
+      // Écoutes — PRO / PART
+      content.querySelector(`#noteBtn-${slotId}`).addEventListener('click', () => toggleNote(slotId));
+      content.querySelector(`#factureBtn-${slotId}`).addEventListener('click', () => toggleFacture(slotId));
+      content.querySelector(`#factureStatus-${slotId}`).addEventListener('change', () => updateFactureUI(slotId));
+      content.querySelector(`#factureSent-${slotId}`).addEventListener('click', (e)=> e.target.classList.toggle('active'));
+      content.querySelector(`#facturePaid-${slotId}`).addEventListener('click', (e)=> e.target.classList.toggle('active'));
+      content.querySelector(`#noteField-${slotId} .close-btn`).addEventListener('click', () => toggleNote(slotId));
+      content.querySelector(`#factureField-${slotId} .close-btn`).addEventListener('click', () => toggleFacture(slotId));
+      content.querySelector(`#note-${slotId}`).addEventListener('input', ()=> updateNoteIndicator(slotId));
+
+      // Boutons RDV → couleurs + label
+      content.querySelector('.lift-express').addEventListener('click', ()=> selectOption('LIFT EXPRESS', slotId));
+      content.querySelector('.lift').addEventListener('click', ()=> selectOption('# LIFT', slotId));
+      content.querySelector('.rdv-perso').addEventListener('click', ()=> selectOption('RDV PERSO', slotId));
+      content.querySelector('.pause').addEventListener('click', ()=> selectOption('PAUSE', slotId));
+
+      // Réserver / Modifier / Annuler
+      content.querySelector('.btn-reserver').addEventListener('click', ()=> reserve(formatted, slotId));
+      content.querySelector('.btn-modifier').addEventListener('click', ()=> modifyReservation(slotId));
+      content.querySelector('.btn-annuler').addEventListener('click', ()=> cancelReservation(slotId));
+
+      // PRO / PART
+      proPart.querySelector(`#pro-${slotId}`).addEventListener('click', ()=> selectProPart('PRO', slotId));
+      proPart.querySelector(`#part-${slotId}`).addEventListener('click', ()=> selectProPart('PART', slotId));
+
+      return wrap;
     }
-  };
 
-  window.toggleNote = id=>{
-    const f=document.getElementById(`noteField-${id}`);
-    f.style.display=(f.style.display==="none"||f.style.display==="")?"block":"none";
-  };
-  window.updateNoteIndicator=id=>{
-    const btn=document.getElementById(`noteBtn-${id}`);
-    const v=document.getElementById(`note-${id}`).value.trim();
-    if(v.length>0){btn.classList.add("has-note");btn.innerText="NOTE ✎";}
-    else{btn.classList.remove("has-note");btn.innerText="NOTE";}
-  };
-
-  window.toggleFacture=id=>{
-    const f=document.getElementById(`factureField-${id}`);
-    f.style.display=(f.style.display==="none"||f.style.display==="")?"block":"none";
-  };
-  window.toggleFactureType=id=>{
-    const type=document.getElementById(`factureType-${id}`).value;
-    document.getElementById(`facturePro-${id}`).style.display=(type==="PRO")?"block":"none";
-    document.getElementById(`facturePart-${id}`).style.display=(type==="PART")?"block":"none";
-  };
-  window.toggleFactureFields=id=>{
-    const status=document.getElementById(`factureStatus-${id}`).value;
-    const type=document.getElementById(`factureType-${id}`).value;
-    if(type==="PRO"){
-      document.getElementById(`extraPro-${id}`).style.display=(status==="deja")?"none":"block";
-    } else {
-      document.getElementById(`extraPart-${id}`).style.display=(status==="deja")?"none":"block";
+    /* =========================
+       Logique UI (clientType, factures, notes, couleurs)
+    ========================== */
+    function getEls(id){
+      return {
+        slot: document.querySelector(`[data-slot-id="${id}"]`),
+        lieux: document.getElementById(`lieux-${id}`),
+        selected: document.getElementById(`selectedOption-${id}`),
+        noteBtn: document.getElementById(`noteBtn-${id}`),
+        noteField: document.getElementById(`noteField-${id}`),
+        note: document.getElementById(`note-${id}`),
+        facBtn: document.getElementById(`factureBtn-${id}`),
+        facField: document.getElementById(`factureField-${id}`),
+        facStatus: document.getElementById(`factureStatus-${id}`),
+        facSent: document.getElementById(`factureSent-${id}`),
+        facPaid: document.getElementById(`facturePaid-${id}`),
+        // PRO
+        facFirme: document.getElementById(`factureFirme-${id}`),
+        extraPro: document.getElementById(`extraPro-${id}`),
+        facRue: document.getElementById(`factureRue-${id}`),
+        facCP: document.getElementById(`factureCP-${id}`),
+        facVille: document.getElementById(`factureVille-${id}`),
+        facTVA: document.getElementById(`factureTVA-${id}`),
+        facEmail: document.getElementById(`factureEmail-${id}`),
+        // PART
+        facPartWrap: document.getElementById(`facturePart-${id}`),
+        facProWrap: document.getElementById(`facturePro-${id}`),
+        extraPart: document.getElementById(`extraPart-${id}`),
+        facPrenom: document.getElementById(`facturePrenom-${id}`),
+        facNom: document.getElementById(`factureNom-${id}`),
+        facRueP: document.getElementById(`factureRueP-${id}`),
+        facCPP: document.getElementById(`factureCPP-${id}`),
+        facVilleP: document.getElementById(`factureVilleP-${id}`),
+        facEmailP: document.getElementById(`factureEmailP-${id}`),
+        facPay: document.getElementById(`facturePaiement-${id}`),
+        // pro/part buttons
+        proBtn: document.getElementById(`pro-${id}`),
+        partBtn: document.getElementById(`part-${id}`)
+      }
     }
-  };
-  window.updateFactureIndicator=id=>{
-    const btn=document.getElementById(`factureBtn-${id}`);
-    const type=document.getElementById(`factureType-${id}`).value;
-    const paiement=document.getElementById(`facturePaiement-${id}`).value;
-    let ok=false;
-    if(type==="PRO"){
-      ok=document.getElementById(`factureFirme-${id}`).value.trim().length>0 && paiement!=="";
-    } else {
-      ok=document.getElementById(`facturePrenom-${id}`).value.trim().length>0 &&
-         document.getElementById(`factureNom-${id}`).value.trim().length>0 && paiement!=="";
+
+    function selectProPart(type, id){
+      const el = getEls(id);
+      // Mémorise le type au niveau du créneau
+      el.slot.dataset.clientType = type;
+
+      // Visuel boutons
+      if(type === 'PRO'){
+        el.proBtn.classList.remove('off');
+        el.partBtn.classList.add('off');
+      }else{
+        el.partBtn.classList.remove('off');
+        el.proBtn.classList.add('off');
+      }
+
+      // Si la facture est ouverte, on affiche le bon sous-formulaire
+      updateFactureUI(id);
+      // Et recalcul de l'indicateur ✎
+      updateFactureIndicator(id);
     }
-    if(ok){btn.classList.add("has-facture");btn.innerText="FACTURE ✎";}
-    else{btn.classList.remove("has-facture");btn.innerText="FACTURE";}
-  };
-  window.toggleStatus=(type,id)=>{
-    const el=document.getElementById(`${type}-${id}`);
-    el.classList.toggle("active");
-  };
-  window.selectProPart=(type,id)=>{
-    const pro=document.getElementById(`pro-${id}`),part=document.getElementById(`part-${id}`);
-    if(type==="PRO"){pro.style.display="block";part.style.display="none";}
-    else{pro.style.display="none";part.style.display="block";}
-  };
 
-  /* Réserver / Modifier / Annuler */
-  window.reserve = async function(time,id){
-    document.getElementById(`lieux-${id}`).disabled=true;
-    await setDoc(doc(db,"reservations",`${datePicker.value}_${id}`),{
-      date: datePicker.value,
-      slotId: id,
-      option: document.getElementById(`selectedOption-${id}`).innerText,
-      lieux: document.getElementById(`lieux-${id}`).value,
-      note: document.getElementById(`note-${id}`).value,
-      type: document.getElementById(`factureType-${id}`).value,
-      firme: document.getElementById(`factureFirme-${id}`)?.value || "",
-      prenom: document.getElementById(`facturePrenom-${id}`)?.value || "",
-      nom: document.getElementById(`factureNom-${id}`)?.value || "",
-      paiement: document.getElementById(`facturePaiement-${id}`).value,
-      factureSent: document.getElementById(`factureSent-${id}`).classList.contains("active"),
-      facturePaid: document.getElementById(`facturePaid-${id}`).classList.contains("active")
-    });
-  };
+    function toggleNote(id){
+      const { noteField } = getEls(id);
+      noteField.style.display = (noteField.style.display === 'block') ? 'none' : 'block';
+    }
+    function updateNoteIndicator(id){
+      const { noteBtn, note } = getEls(id);
+      if((note.value || '').trim().length > 0){
+        noteBtn.classList.add('has-note');
+        noteBtn.innerText = 'NOTE ✎';
+      }else{
+        noteBtn.classList.remove('has-note');
+        noteBtn.innerText = 'NOTE';
+      }
+    }
 
-  window.modifyReservation=id=>{
-    document.getElementById(`lieux-${id}`).disabled=false;
-    // ✅ Réafficher PRO et PART
-    document.getElementById(`pro-${id}`).style.display="block";
-    document.getElementById(`part-${id}`).style.display="block";
-  };
+    function toggleFacture(id){
+      const { facField } = getEls(id);
+      facField.style.display = (facField.style.display === 'block') ? 'none' : 'block';
+      updateFactureUI(id);
+      updateFactureIndicator(id);
+    }
 
-  window.cancelReservation = async function(id){
-    await deleteDoc(doc(db,"reservations",`${datePicker.value}_${id}`));
-    document.getElementById(`selectedOption-${id}`).innerText="Choisir";
-    const lieux=document.getElementById(`lieux-${id}`);
-    lieux.value=""; lieux.disabled=false; lieux.style.backgroundColor="white";
-    document.getElementById(`pro-${id}`).style.display="block";
-    document.getElementById(`part-${id}`).style.display="block";
-  };
+    function updateFactureUI(id){
+      const { slot, facStatus, facProWrap, facPartWrap, extraPro, extraPart } = getEls(id);
+      const type = slot.dataset.clientType || ""; // "", "PRO", "PART"
+      // Affiche le bloc correspondant
+      if(type === "PRO"){
+        facProWrap.style.display = "block";
+        facPartWrap.style.display = "none";
+      }else if(type === "PART"){
+        facProWrap.style.display = "none";
+        facPartWrap.style.display = "block";
+      }else{
+        // aucun type choisi → on affiche PRO par défaut mais grisé (pas bloquant)
+        facProWrap.style.display = "block";
+        facPartWrap.style.display = "none";
+      }
 
-  async function loadReservations(date){
-    const snap=await getDocs(collection(db,"reservations"));
-    snap.forEach(docSnap=>{
-      const data=docSnap.data();
-      if(data.date===date) restoreReservation(data);
-    });
-  }
-  function restoreReservation(data){
-    const id=data.slotId;
-    if(data.option){ document.getElementById(`selectedOption-${id}`).innerText=data.option; window.selectOption(data.option,id); }
-    if(data.lieux){const lieux=document.getElementById(`lieux-${id}`); lieux.value=data.lieux; lieux.disabled=true;}
-    if(data.note){document.getElementById(`note-${id}`).value=data.note; document.getElementById(`noteBtn-${id}`).classList.add("has-note");}
-    if(data.firme || (data.prenom && data.nom)){document.getElementById(`factureBtn-${id}`).classList.add("has-facture");}
-    if(data.factureSent) document.getElementById(`factureSent-${id}`).classList.add("active");
-    if(data.facturePaid) document.getElementById(`facturePaid-${id}`).classList.add("active");
-  }
-</script>
+      // Statut déjà encodé / pas encodé → affiche ou masque extras
+      const status = facStatus.value; // "encore" | "deja"
+      if(type === "PRO"){
+        extraPro.style.display = (status === "deja") ? "none" : "block";
+      }else if(type === "PART"){
+        extraPart.style.display = (status === "deja") ? "none" : "block";
+      }else{
+        // pas de type choisi → extras visibles (mais l'indicateur ✎ tiendra compte des champs requis)
+        extraPro.style.display = (status === "deja") ? "none" : "block";
+      }
+    }
+
+    function selectOption(option, id){
+      const { selected, lieux } = getEls(id);
+      selected.innerText = option;
+      if(option === 'LIFT EXPRESS') lieux.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--liftx');
+      else if(option === '# LIFT')  lieux.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--lift');
+      else if(option === 'RDV PERSO') lieux.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--perso');
+      else if(option === 'PAUSE') lieux.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--softblue');
+    }
+
+    function updateFactureIndicator(id){
+      const el = getEls(id);
+      const type = el.slot.dataset.clientType || ""; // PRO | PART | ""
+      const status = el.facStatus.value; // encore | deja
+      let ok = false;
+
+      if(type === "PRO"){
+        const baseOk = (el.facFirme.value || '').trim().length > 0;
+        const payOk = (el.facPay.value || '') !== '';
+        if(status === "deja"){
+          ok = baseOk && payOk;
+        }else{ // pas encodé
+          const allOk =
+            (el.facRue.value||'').trim() &&
+            (el.facCP.value||'').trim() &&
+            (el.facVille.value||'').trim() &&
+            (el.facTVA.value||'').trim() &&
+            (el.facEmail.value||'').trim();
+          ok = baseOk && payOk && allOk;
+        }
+      }else if(type === "PART"){
+        const pnOk = (el.facPrenom.value||'').trim() && (el.facNom.value||'').trim();
+        const payOk = (el.facPay.value||'') !== '';
+        if(status === "deja"){
+          ok = pnOk && payOk;
+        }else{
+          const allOk =
+            (el.facRueP.value||'').trim() &&
+            (el.facCPP.value||'').trim() &&
+            (el.facVilleP.value||'').trim() &&
+            (el.facEmailP.value||'').trim();
+          ok = pnOk && payOk && allOk;
+        }
+      }else{
+        // Aucun type choisi → on n’allume pas ✎
+        ok = false;
+      }
+
+      if(ok){
+        el.facBtn.classList.add('has-facture');
+        el.facBtn.innerText = 'FACTURE ✎';
+      }else{
+        el.facBtn.classList.remove('has-facture');
+        el.facBtn.innerText = 'FACTURE';
+      }
+    }
+
+    /* =========================
+       Réserver / Modifier / Annuler + Firestore
+    ========================== */
+    async function reserve(time, id){
+      const el = getEls(id);
+      const lieuxVal = (el.lieux.value||'').trim();
+      if(!lieuxVal){ alert("Veuillez entrer un lieu."); return; }
+
+      // lock "Lieux"
+      el.lieux.disabled = true;
+
+      // Sauvegarde Firestore
+      const docId = `${datePicker.value}_${id}`;
+      await setDoc(doc(db, "reservations", docId), {
+        date: datePicker.value,
+        slotId: id,
+        timeLabel: el.selected.innerText, // "Choisir" ou LIFT/...
+        lieux: el.lieux.value,
+        note: el.note.value || "",
+        clientType: el.slot.dataset.clientType || "",
+        facture: {
+          status: el.facStatus.value,
+          firme: el.facFirme.value || "",
+          rue: el.facRue.value || "",
+          cp: el.facCP.value || "",
+          ville: el.facVille.value || "",
+          tva: el.facTVA.value || "",
+          email: el.facEmail.value || "",
+          prenom: el.facPrenom.value || "",
+          nom: el.facNom.value || "",
+          rueP: el.facRueP.value || "",
+          cpP: el.facCPP.value || "",
+          villeP: el.facVilleP.value || "",
+          emailP: el.facEmailP.value || "",
+          paiement: el.facPay.value || ""
+        },
+        indicators: {
+          note: el.noteBtn.classList.contains('has-note'),
+          factureReady: el.facBtn.classList.contains('has-facture'),
+          sent: el.facSent.classList.contains('active'),
+          paid: el.facPaid.classList.contains('active')
+        },
+        // couleur actuelle du textarea
+        lieuxBg: el.lieux.style.backgroundColor || "white"
+      });
+    }
+
+    function modifyReservation(id){
+      const el = getEls(id);
+      el.lieux.disabled = false; // on réactive uniquement Lieux
+      // On réactive visuellement les deux boutons pro/part (sans perdre le type déjà choisi)
+      el.proBtn.classList.remove('off');
+      el.partBtn.classList.remove('off');
+    }
+
+    async function cancelReservation(id){
+      const el = getEls(id);
+
+      // Firestore : suppression
+      const docId = `${datePicker.value}_${id}`;
+      await deleteDoc(doc(db, "reservations", docId));
+
+      // Reset visuel et données
+      el.selected.innerText = "Choisir";
+      el.lieux.value = "";
+      el.lieux.disabled = false;
+      el.lieux.style.backgroundColor = "white";
+      el.slot.dataset.clientType = "";
+
+      // pro/part réaffichés non off
+      el.proBtn.classList.remove('off');
+      el.partBtn.classList.remove('off');
+
+      // NOTE
+      el.note.value = "";
+      el.noteBtn.classList.remove('has-note');
+      el.noteBtn.innerText = "NOTE";
+      el.noteField.style.display = "none";
+
+      // FACTURE
+      el.facFirme.value = "";
+      el.facRue.value = "";
+      el.facCP.value = "";
+      el.facVille.value = "";
+      el.facTVA.value = "";
+      el.facEmail.value = "";
+      el.facPrenom.value = "";
+      el.facNom.value = "";
+      el.facRueP.value = "";
+      el.facCPP.value = "";
+      el.facVilleP.value = "";
+      el.facEmailP.value = "";
+      el.facPay.value = "";
+      el.facStatus.value = "encore";
+      el.facBtn.classList.remove('has-facture');
+      el.facBtn.innerText = "FACTURE";
+      el.facField.style.display = "none";
+      el.facSent.classList.remove('active');
+      el.facPaid.classList.remove('active');
+
+      // UI facture recalcul
+      updateFactureUI(id);
+    }
+
+    async function loadReservations(dateStr){
+      // Récupère uniquement les docs du jour
+      const q = query(collection(db, "reservations"), where("date","==", dateStr));
+      const snap = await getDocs(q);
+      snap.forEach(d => {
+        restoreReservation(d.data());
+      });
+    }
+
+    function restoreReservation(data){
+      const id = data.slotId;
+      const el = getEls(id);
+      if(!el.slot) return; // au cas où
+
+      // Type client
+      el.slot.dataset.clientType = data.clientType || "";
+      if(data.clientType === "PRO"){
+        el.proBtn.classList.remove('off');
+        el.partBtn.classList.add('off');
+      }else if(data.clientType === "PART"){
+        el.partBtn.classList.remove('off');
+        el.proBtn.classList.add('off');
+      }else{
+        el.proBtn.classList.remove('off');
+        el.partBtn.classList.remove('off');
+      }
+
+      // Option + couleur
+      if(data.timeLabel){
+        el.selected.innerText = data.timeLabel;
+        // remettre la couleur mémorisée si dispo
+        if(data.lieuxBg) el.lieux.style.backgroundColor = data.lieuxBg;
+      }
+
+      // Lieux
+      el.lieux.value = data.lieux || "";
+      if(el.lieux.value) el.lieux.disabled = true;
+
+      // Note
+      el.note.value = data.note || "";
+      if((el.note.value||'').trim()){
+        el.noteBtn.classList.add('has-note'); el.noteBtn.innerText="NOTE ✎";
+      }else{
+        el.noteBtn.classList.remove('has-note'); el.noteBtn.innerText="NOTE";
+      }
+
+      // Facture contenus
+      const f = data.facture || {};
+      el.facStatus.value = f.status || "encore";
+      el.facFirme.value = f.firme || "";
+      el.facRue.value = f.rue || "";
+      el.facCP.value = f.cp || "";
+      el.facVille.value = f.ville || "";
+      el.facTVA.value = f.tva || "";
+      el.facEmail.value = f.email || "";
+      el.facPrenom.value = f.prenom || "";
+      el.facNom.value = f.nom || "";
+      el.facRueP.value = f.rueP || "";
+      el.facCPP.value = f.cpP || "";
+      el.facVilleP.value = f.villeP || "";
+      el.facEmailP.value = f.emailP || "";
+      el.facPay.value = f.paiement || "";
+
+      // Indicateurs
+      const ind = data.indicators || {};
+      toggleIndicator(el.facBtn, ind.factureReady, 'FACTURE');
+      toggleIndicator(el.noteBtn, ind.note, 'NOTE');
+      setActive(el.facSent, !!ind.sent);
+      setActive(el.facPaid, !!ind.paid);
+
+      // Ajuste le visuel du formulaire en fonction du type/statut
+      updateFactureUI(id);
+      // Recalcule l'indicateur ✎ si nécessaire
+      updateFactureIndicator(id);
+    }
+
+    function toggleIndicator(btn, state, baseLabel){
+      if(state){
+        btn.classList.add('has-facture');
+        btn.innerText = baseLabel + ' ✎';
+      }else{
+        btn.classList.remove('has-facture');
+        btn.innerText = baseLabel;
+      }
+    }
+    function setActive(el, on){
+      if(on) el.classList.add('active'); else el.classList.remove('active');
+    }
+  </script>
 </body>
 </html>
 
